@@ -11,7 +11,7 @@ Claude Code skills to QA web apps: responsive checks across devices, UX review, 
 | Skill | What it does | Status |
 |---|---|---|
 | [`responsive-check`](skills/responsive-check/SKILL.md) | Starts your app and walks its screens at 360px, 390px and 1280px, light and dark, with Playwright. Flags horizontal scroll, elements sticking out, cut-off or spilling text, buttons that do not fit; returns annotated screenshots and a prioritized report. | ✅ Ready |
-| `release` | Batches changes on an accumulation branch, opens a single PR with a summary, follows CI, fixes failures, shares the preview link and warns about cached public images that changed without a rename. | 🚧 Next |
+| [`release`](skills/release/SKILL.md) | Batches changes on an accumulation branch, opens a single PR with a summary, follows CI, fixes failures, shares the preview link and warns about cached public images that changed without a rename. | ✅ Ready |
 | `firestore-rules` | For every permission change: the rule, a test that must fail and one that must pass, run in the emulator. | 🚧 Planned |
 | `ux-review` | Checklist review: one meaning per icon (with text), one primary button per moment, protected destructive actions, clear copy. | 🚧 Planned |
 | `i18n-guard` | Untranslated strings and unused keys. | 🚧 Planned |
@@ -100,6 +100,32 @@ Lessons baked in:
 - **Locale.** Set `locale` to your audience: longer translations are where layouts break.
 
 Requirements: Node 18+ and Playwright (`npm i -D playwright`). It also picks up a global install at `/opt/node-tools/node_modules/playwright` and Chromium at `/opt/pw-browsers/chromium`, as found in Claude Code cloud sessions.
+
+## release
+
+"Ship it", "hacé el release", "abrí el PR": Claude collects the changes on the repo's accumulation branch (e.g. `proximo`, picked up from past merges), so merging is **one deploy per batch instead of one per change**. Then it:
+
+1. runs [`scripts/release_check.mjs`](skills/release/scripts/release_check.mjs): commits grouped by type, a PR body draft, and warnings;
+2. runs lint/test/build like CI does, pushes, and opens **one** PR (or updates the open one);
+3. follows CI, reads the failing log, reproduces and fixes on the branch until green;
+4. hands you the preview link (Firebase channel, Vercel, Netlify, Cloudflare Pages);
+5. merges only when you say so, and restarts the branch for the next batch.
+
+The check catches what CI does not:
+
+```
+[high] /logo.svg changed but kept its name. Browsers that already have it keep
+       showing the old one for up to 30 days. Rename it (e.g. /logo-v2.svg) and
+       update every reference.
+       cache rule: **/*.@(webp|png|svg|jpg|jpeg|ico) → max-age 2592000s (~30 days)
+       ref: index.html:9:<img src="/logo.svg" alt="Demo">
+[high] public/favicon-v2.png was renamed to public/favicon-v3.png but
+       "favicon-v2.png" is still referenced.
+       ref: index.html:5:<link rel="icon" type="image/png" href="/favicon-v2.png" />
+       ref: vite.config.js:39:includeAssets: ['favicon-v2.png'],
+```
+
+Cache rules are read from `firebase.json`, `vercel.json` or `_headers`; local or generated files in the diff (`.env`, `dist/`) are flagged too.
 
 ## Repository layout
 

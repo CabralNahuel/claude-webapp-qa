@@ -17,6 +17,10 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const requireBrowser = process.argv.includes('--browser')
 let failures = 0
 
+function check_(ok, message) {
+  return check(ok, message)
+}
+
 function check(ok, message) {
   console.log(`${ok ? '✓' : '✗'} ${message}`)
   if (!ok) failures++
@@ -176,6 +180,40 @@ if (!hasPlaywright) {
     '/ok stays clean under stress and its centered chips pass the rule',
   )
   fs.rmSync(out2, { recursive: true, force: true })
+}
+
+// ---- release: release_check on throwaway repos
+{
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'webapp-qa-release-'))
+  const make = (name, scenario) => {
+    execFileSync(process.execPath, [path.join(ROOT, 'tools/fixtures/release/make_repo.mjs'), path.join(tmp, name), scenario], { stdio: 'pipe' })
+    return path.join(tmp, name, 'app')
+  }
+  const sh = (cwd, ...args) => execFileSync('git', ['-C', cwd, ...args], {
+    stdio: 'pipe',
+    env: { ...process.env, GIT_AUTHOR_NAME: 'T', GIT_AUTHOR_EMAIL: 't@x', GIT_COMMITTER_NAME: 'T', GIT_COMMITTER_EMAIL: 't@x' },
+  })
+  const check = (cwd) => JSON.parse(execFileSync(process.execPath, [
+    path.join(skillsDir, 'release/scripts/release_check.mjs'), '--repo', cwd, '--base', 'origin/master', '--json',
+  ]).toString())
+
+  const ship = make('ship', 'ship')
+  sh(ship, 'checkout', '-qb', 'proximo')
+  sh(ship, 'commit', '-qam', 'feat: red logo')
+  const r1 = check(ship)
+  check_(r1.warnings.some((w) => w.type === 'cached-asset-changed-in-place' && w.file === 'public/logo.svg' && /30 days/.test(w.message)),
+    'release: logo edited in place under a 30-day cache is flagged')
+  check_(r1.warnings.find((w) => w.file === 'public/logo.svg')?.suggestion === '/logo-v2.svg', 'release: suggests logo-v2.svg')
+  check_(/feat: red logo/.test(r1.prBody) && /logo\.svg/.test(r1.prBody), 'release: PR body lists the commit and the warning')
+
+  const ok = make('ok', 'clean-ok')
+  check_(check(ok).warnings.length === 0, 'release: a rename with every reference updated passes clean')
+  sh(ok, 'checkout', '-qb', 'stale', 'origin/master')
+  sh(ok, 'mv', 'public/favicon-v1.png', 'public/favicon-v2.png')
+  sh(ok, 'commit', '-qm', 'rename favicon only')
+  check_(check(ok).warnings.some((w) => w.type === 'stale-reference' && w.references.some((x) => x.startsWith('index.html'))),
+    'release: a renamed file still referenced by its old name is flagged')
+  fs.rmSync(tmp, { recursive: true, force: true })
 }
 
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed')

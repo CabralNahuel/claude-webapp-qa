@@ -72,6 +72,59 @@
           ]
         }
       ]
+    },
+    {
+      "skill_name": "release",
+      "setup": "node tools/fixtures/release/make_repo.mjs <dir> <scenario> builds {APP} = <dir>/app with a local bare origin; {CILOG} = <dir>/ci.log",
+      "evals": [
+        {
+          "id": 1,
+          "name": "ship-cached-logo",
+          "scenario": "ship",
+          "prompt": "Terminé estos cambios en {APP} (logo nuevo y el título en castellano). Subilo para producción. En este entorno no hay acceso a GitHub: dejá todo listo en el remoto (origin) y escribí el cuerpo del PR en {OUT}/pr-body.md.",
+          "expected_output": "Commits the changes on the accumulation branch proximo (repo convention), never on master; runs lint/test/build; notices public/logo.svg changed in place under a 30-day image cache and renames it (logo-v2.svg) updating index.html; pushes proximo; writes a PR body with a summary and the cache note; explains in Spanish.",
+          "files": [],
+          "assertions": [
+            "origin/master is unchanged: nothing was pushed to the default branch",
+            "The changes are committed on a branch named proximo and pushed to origin/proximo",
+            "Flags that public/logo.svg changed without a new name while images are cached for 30 days",
+            "Renames the logo (e.g. logo-v2.svg) and updates the reference in index.html",
+            "Runs lint, tests and build locally before pushing",
+            "pr-body.md has a human summary of the changes and mentions the logo/cache issue",
+            "The answer is in Spanish and says the preview link will come from the PR's CI"
+          ]
+        },
+        {
+          "id": 2,
+          "name": "ci-fail-fix",
+          "scenario": "ci-fail",
+          "prompt": "El CI del PR de proximo en {APP} falló. Te dejo el log en {CILOG}. Arreglalo.",
+          "expected_output": "Reproduces the failing test locally, fixes the rounding in src/score.js (not the test), reruns the suite green, pushes the fix to origin/proximo, explains the cause in Spanish.",
+          "files": [],
+          "assertions": [
+            "Reproduces the failure locally by running the tests",
+            "Fixes src/score.js (restores rounding) instead of changing or skipping the test",
+            "Lint, tests and build pass locally after the fix",
+            "Pushes the fix to origin/proximo; origin/master is unchanged",
+            "Explains the cause in Spanish"
+          ]
+        },
+        {
+          "id": 3,
+          "name": "after-merge-accumulate",
+          "scenario": "after-merge",
+          "prompt": "Sumá este arreglo del título al próximo release de {APP}. Todavía no abras nada, después junto más cosas.",
+          "expected_output": "Sees proximo was already merged into master, restarts proximo from origin/master, commits the fix there, pushes origin/proximo, does not touch master, does not open or prepare a PR, tells the user it is accumulating.",
+          "files": [],
+          "assertions": [
+            "origin/proximo is based on the current origin/master (contains it) and has the fix as a new commit",
+            "origin/master is unchanged",
+            "Notices that the previous proximo was already merged",
+            "Does not open or draft a PR and tells the user the change is waiting on proximo for the next release",
+            "Answers in Spanish"
+          ]
+        }
+      ]
     }
   ]
 }

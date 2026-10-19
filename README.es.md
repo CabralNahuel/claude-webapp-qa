@@ -11,7 +11,7 @@ Skills de Claude Code para controlar apps web antes de publicarlas: chequeo resp
 | Skill | Qué hace | Estado |
 |---|---|---|
 | [`responsive-check`](skills/responsive-check/SKILL.md) | Levanta tu app y recorre sus pantallas en 360px, 390px y 1280px, modo claro y oscuro, con Playwright. Marca scroll horizontal, elementos que se salen, texto cortado o que desborda, botones que no entran; devuelve capturas marcadas y un reporte por prioridad. | ✅ Lista |
-| `release` | Junta los cambios en una rama de acumulación, abre un solo PR con resumen, sigue el CI, arregla lo que falla, pasa el link de preview y avisa cuando una imagen pública cambia sin cambiar de nombre (caché). | 🚧 Próxima |
+| [`release`](skills/release/SKILL.md) | Junta los cambios en una rama de acumulación, abre un solo PR con resumen, sigue el CI, arregla lo que falla, pasa el link de preview y avisa cuando una imagen pública cambia sin cambiar de nombre (caché). | ✅ Lista |
 | `firestore-rules` | Por cada cambio de permisos: la regla, un test que tiene que fallar y otro que tiene que pasar, en el emulador. | 🚧 Planeada |
 | `ux-review` | Checklist: íconos con un solo significado y con texto, un solo botón principal según el momento, acciones destructivas protegidas, textos claros. | 🚧 Planeada |
 | `i18n-guard` | Textos sin traducir y claves sobrantes. | 🚧 Planeada |
@@ -98,6 +98,32 @@ Aprendizajes que ya trae:
 - **Idioma.** Poné `locale` según tu público: las traducciones más largas son donde se rompe el diseño.
 
 Requisitos: Node 18+ y Playwright (`npm i -D playwright`). También usa una instalación global en `/opt/node-tools/node_modules/playwright` y el Chromium de `/opt/pw-browsers/chromium`, como en las sesiones en la nube de Claude Code.
+
+## release
+
+"Subilo", "hacé el release", "abrí el PR": Claude junta los cambios en la rama de acumulación del repo (por ejemplo `proximo`, la detecta de los merges anteriores), así el merge es **un deploy por tanda y no uno por cambio**. Después:
+
+1. corre [`scripts/release_check.mjs`](skills/release/scripts/release_check.mjs): commits agrupados por tipo, borrador del cuerpo del PR y avisos;
+2. corre lint/test/build como el CI, sube y abre **un solo** PR (o actualiza el abierto);
+3. sigue el CI, lee el log del fallo, lo reproduce y lo arregla en la rama hasta que quede verde;
+4. te pasa el link de preview (canal de Firebase, Vercel, Netlify, Cloudflare Pages);
+5. mergea solo cuando vos digas, y reinicia la rama para la próxima tanda.
+
+El chequeo encuentra lo que el CI no ve:
+
+```
+[high] /logo.svg changed but kept its name. Browsers that already have it keep
+       showing the old one for up to 30 days. Rename it (e.g. /logo-v2.svg) and
+       update every reference.
+       cache rule: **/*.@(webp|png|svg|jpg|jpeg|ico) → max-age 2592000s (~30 days)
+       ref: index.html:9:<img src="/logo.svg" alt="Demo">
+[high] public/favicon-v2.png was renamed to public/favicon-v3.png but
+       "favicon-v2.png" is still referenced.
+       ref: index.html:5:<link rel="icon" type="image/png" href="/favicon-v2.png" />
+       ref: vite.config.js:39:includeAssets: ['favicon-v2.png'],
+```
+
+Las reglas de caché salen de `firebase.json`, `vercel.json` o `_headers`; también avisa si en el diff hay archivos locales o generados (`.env`, `dist/`).
 
 ## Estructura del repo
 
