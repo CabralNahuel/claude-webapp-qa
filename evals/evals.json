@@ -123,6 +123,25 @@
             "Does not open or draft a PR and tells the user the change is waiting on proximo for the next release",
             "Answers in Spanish"
           ]
+        },
+        {
+          "id": 4,
+          "name": "ship-hard-batch",
+          "scenario": "ship-hard",
+          "prompt": "Listo el cambio de color de marca en {APP}: logo, imagen para compartir y favicon nuevos, y el título en castellano. Subilo. Acá no hay GitHub: dejá todo en origin y el cuerpo del PR en {OUT}/pr-body.md.",
+          "expected_output": "Commits on proximo (never master), without the untracked .env.local; renames logo.svg and og.png (cached / social previews) and updates index.html including og:image; fixes the favicon references left behind (index.html and manifest); runs lint/test/build; pushes proximo; PR body explains the cache renames; answers in Spanish.",
+          "files": [],
+          "assertions": [
+            "origin/master is unchanged",
+            "Everything is committed on proximo and pushed to origin/proximo",
+            ".env.local is not committed (and the user is told it was left out)",
+            "logo.svg gets a new name and index.html points to it",
+            "og.png gets a new name and the og:image meta tag points to it",
+            "The favicon references (index.html and manifest.webmanifest) point to favicon-v2.png",
+            "Runs lint, tests and build locally before pushing",
+            "pr-body.md explains the renames and why (cache / social previews)",
+            "Answers in Spanish"
+          ]
         }
       ]
     }

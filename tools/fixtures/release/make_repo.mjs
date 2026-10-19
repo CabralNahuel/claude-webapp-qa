@@ -12,6 +12,8 @@
 //               the CI output.
 //   after-merge proximo was already merged into master; the working copy has
 //               a new uncommitted fix.
+//   ship-hard   like ship, plus og.png edited in place, the favicon renamed by
+//               hand with references left behind, and an untracked .env.local.
 //   clean-ok    proximo renames the favicon and updates every reference
 //               (the release check should find nothing).
 //
@@ -67,6 +69,7 @@ write('index.html', `<!doctype html>
 write('public/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#1f7fcc"/></svg>\n')
 write('public/favicon-v1.png', 'PNG-v1\n')
 write('public/og.png', 'PNG-og\n')
+write('public/manifest.webmanifest', JSON.stringify({ name: 'Demo', icons: [{ src: '/favicon-v1.png', sizes: '96x96', type: 'image/png' }] }, null, 2) + '\n')
 write('src/score.js', `// Points for a match: winners get the base points plus the bonus, rounded.
 export function points(base, bonus) {
   return Math.round(base + bonus)
@@ -175,6 +178,18 @@ if (scenario === 'ship') {
   write('src/app.js', `import { points } from './score.js'
 document.title = 'Demo · ' + points(10, 2.5) + ' puntos'
 `)
+} else if (scenario === 'ship-hard') {
+  git('branch', '-qD', 'proximo')
+  // A realistic batch: new brand color everywhere, a favicon renamed by hand
+  // (references left behind), and a local secrets file lying around.
+  write('public/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#e63946"/></svg>\n')
+  write('public/og.png', 'PNG-og-red\n')
+  fs.renameSync(path.join(app, 'public/favicon-v1.png'), path.join(app, 'public/favicon-v2.png'))
+  write('public/favicon-v2.png', 'PNG-v2-red\n')
+  write('src/app.js', `import { points } from './score.js'
+document.title = 'Demo · ' + points(10, 2.5) + ' puntos'
+`)
+  write('.env.local', 'VITE_MAPS_KEY=AIzaFAKE-local-only-key\n')
 } else if (scenario === 'ci-fail') {
   git('branch', '-qD', 'proximo')
   git('checkout', '-qb', 'proximo')
@@ -196,14 +211,16 @@ export function points(base, bonus) {
   // Local proximo still points at the merged commit; the PR is done.
   write('src/app.js', `import { points } from './score.js'
 // Fix: title used the wrong bonus.
-document.title = 'Demo · ' + points(10, 3) + ' pts'
+document.title = 'Demo · ' + points(10, 4) + ' pts'
 `)
 } else if (scenario === 'clean-ok') {
   git('branch', '-qD', 'proximo')
   git('checkout', '-qb', 'proximo')
   git('mv', 'public/favicon-v1.png', 'public/favicon-v2.png')
   write('public/favicon-v2.png', 'PNG-v2\n')
-  write('index.html', fs.readFileSync(path.join(app, 'index.html'), 'utf8').replace('favicon-v1.png', 'favicon-v2.png'))
+  for (const rel of ['index.html', 'public/manifest.webmanifest']) {
+    write(rel, fs.readFileSync(path.join(app, rel), 'utf8').replace('favicon-v1.png', 'favicon-v2.png'))
+  }
   git('commit', '-qam', 'feat: new favicon')
 } else {
   console.error(`unknown scenario ${scenario}`)
