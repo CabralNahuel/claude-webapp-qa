@@ -118,9 +118,13 @@ if (!hasPlaywright) {
 
   const small = at('/broken', 360)
   check(small?.page.horizontalScroll === true, '360px: detects horizontal scroll')
-  for (const t of ['overflow-viewport', 'text-clipped', 'text-overflows-box', 'overlap', 'low-contrast', 'text-truncated', 'control-wraps', 'small-tap-target']) {
+  for (const t of ['overflow-viewport', 'text-clipped', 'text-overflows-box', 'overlap', 'low-contrast', 'cramped-text', 'text-truncated', 'control-wraps', 'small-tap-target']) {
     check(types(small).has(t), `360px: detects ${t}`)
   }
+  check(
+    small.issues.some((i) => i.type === 'control-wraps' && i.selector.includes('streak')),
+    '360px: detects a badge broken onto several lines',
+  )
   check(
     !small.issues.some((i) => i.selector.includes('scroller')),
     '360px: does not flag the intentional horizontal scroller',

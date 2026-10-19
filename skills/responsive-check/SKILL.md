@@ -75,6 +75,14 @@ Each screen is then measured a second time after the script:
   have a fixed set). Add selectors to `stress.grow` / `stress.noGrow` when
   the guess is wrong.
 
+This DOM stress is generic and quick. When the app's demo data is
+seedable (a localStorage key, a fixtures file, a seed script), realistic
+data is better: put long names and a crowded list into `auth.localStorage`
+(e.g. 18 players on the bench, three-word surnames) and run normally —
+the app then lays it out exactly as it would for a real group. Use both
+when growth is the question: seeded data for realism, `stress` for every
+screen you did not seed.
+
 The report lists, under "Fragile under growth", only what breaks *because*
 of the growth (capped at high: it is not broken for users yet).
 
@@ -182,8 +190,10 @@ Severity guide used by the script (adjust if the context says otherwise):
 |---|---|
 | critical | Page scrolls horizontally; JavaScript error on the page |
 | high | Element sticks out of the viewport; text cut off without ellipsis; text spilling out of a button or heading; two pieces of content overlapping (a badge running into a pill) |
-| medium | Text contrast under WCAG 4.5:1 (high when far below); text spilling out of other boxes; button label wrapping to 3+ lines; ellipsis on a button or heading |
+| medium | Text contrast under WCAG 4.5:1 (high when far below); text spilling out of other boxes; button label wrapping to 3+ lines; a badge broken onto several lines; a phrase squeezed to one word per line; ellipsis on a button or heading |
 | low | Ellipsis on body text; tap target under 24×24px |
 | (rules) | A `layoutRules` expectation is broken: medium unless the rule sets `severity` |
 
-Do not fix the app's code unless the user asks; offer to.
+Do not fix the app's code unless the user asks; offer to. To show that a
+proposed CSS fix works, rerun with it in `injectCss` (it is added to the
+page, the source stays untouched) and compare the two reports.

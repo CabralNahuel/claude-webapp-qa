@@ -24,6 +24,7 @@ Command-line flags override the config (run the script with `--help`).
 | `block` | array | `[]` | URL glob patterns to abort (analytics, chat widgets). |
 | `stress` | bool / object | — | `true` or `{ "textFactor": 1.4, "repeat": 3, "maxItems": 12, "themes": ["light"], "grow": [], "noGrow": [] }`. Re-measures every screen with grown content (see below). `--stress` on the command line. |
 | `layoutRules` | array | `[]` | Expected reflow, e.g. `{ "selector": ".chips", "wrap": true, "align": "center", "maxRows": 2, "description": "...", "severity": "medium" }`. |
+| `injectCss` | string / array | — | CSS added to every page after load (also per route). Use it to verify a proposed fix before editing the app: rerun with the fix and compare. |
 | `waitMs` | number | 700 | Extra settle time after load. |
 | `maxShotsPerScreen` | number | 4 | Annotated viewport shots per route × viewport × theme. |
 | `deviceScaleFactor` | number | 1 | Use 2 for crisper (heavier) screenshots. |
@@ -98,6 +99,7 @@ Each rule applies to every element matching `selector`:
 | `overlap` | Two pieces of content paint over each other: text lines, or boxes with a background/border (pills, badges). Positioned layers, negative margins and transforms are skipped as intentional. |
 | `low-contrast` | Text below WCAG 1.4.3 contrast (4.5:1, or 3:1 for large text) against its solid backdrop, counting opacity. Skipped over images/gradients. One finding per color pair for the whole app. |
 | `layout-rule` | A `layoutRules` expectation is not met; `detail.problem` says which. |
+| `cramped-text` | A 3–8 word phrase laid out one word per line: its column is too narrow. |
 | `control-wraps` | A button/tab label breaks onto 3 or more lines. |
 | `text-truncated` | Ellipsis or line-clamp is hiding text. Often intentional; worth a look on buttons and headings. |
 | `small-tap-target` | A control smaller than 24×24px (WCAG 2.5.8), except links inline in a sentence. |

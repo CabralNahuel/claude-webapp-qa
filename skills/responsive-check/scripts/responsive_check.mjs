@@ -576,7 +576,31 @@ function detectIssues({ ignore }) {
     }
   }
 
-  // 7. Controls whose label wraps onto 3+ lines, and tiny tap targets.
+  // 7. Text squeezed by its column: a pill/badge broken onto several lines,
+  //    or a short phrase reduced to one word per line.
+  const lineTops = (t) => {
+    const range = document.createRange()
+    range.selectNodeContents(t)
+    return new Set([...range.getClientRects()].filter((r) => r.width > 1).map((r) => Math.round(r.top))).size
+  }
+  for (const el of shown) {
+    const texts = [...el.childNodes].filter((n) => n.nodeType === 3 && n.textContent.trim())
+    if (!texts.length || isControl(el)) continue
+    const st = style(el)
+    if (st.whiteSpace.startsWith('pre')) continue
+    const lines = Math.max(...texts.map(lineTops))
+    if (lines < 2) continue
+    const r = el.getBoundingClientRect()
+    const isPill = paintsBox(st) && parseFloat(st.borderTopLeftRadius) >= 8 && r.width < 220
+    const words = texts.map((t) => t.textContent.trim().split(/\s+/).length).reduce((a, b) => a + b, 0)
+    if (isPill) {
+      add(el, 'control-wraps', 'medium', { lines, note: 'badge/pill text breaks onto several lines' })
+    } else if (words >= 3 && words <= 8 && lines >= words) {
+      add(el, 'cramped-text', 'medium', { lines, words, width: Math.round(r.width), note: 'one word per line: the column is too narrow' })
+    }
+  }
+
+  // 8. Controls whose label wraps onto 3+ lines, and tiny tap targets.
   for (const el of shown.filter(isControl)) {
     if (el.matches('a') && !el.matches('nav a, [role="button"], a[class*="btn"], a[class*="button"]')) {
       // Plain inline links in prose wrap naturally; only check tap size.
@@ -677,6 +701,7 @@ function applyStress({ textFactor, repeat, maxItems, ignore, grow = [], noGrow =
     if (/^[\d\s.,:;+\-\u2212–—%/()#·•|×▲▼]+$/.test(core)) continue
     if (/\d/.test(core) && core.length <= 6) continue
     if (/^\p{Lu}{1,3}$/u.test(core)) continue
+    if (!/\p{L}/u.test(core)) continue // emoji, symbols
     const target = Math.ceil(core.length * textFactor)
     let out = core
     if (!/\s/.test(core)) {
@@ -693,7 +718,7 @@ function applyStress({ textFactor, repeat, maxItems, ignore, grow = [], noGrow =
             extra--
           }
         }
-        if (next.length === out.length) next += out.slice(-1)
+        if (next.length === out.length) next += [...out].pop() // whole code point, never half an emoji
         out = next
       }
     } else {
@@ -821,6 +846,10 @@ async function settle(page, cfg, route) {
   await page.addStyleTag({
     content: '*,*::before,*::after{animation-play-state:paused!important;transition:none!important;caret-color:transparent!important}',
   }).catch(() => {})
+  // Proposed CSS fixes, to see them working before touching the code.
+  for (const css of [].concat(cfg.injectCss || [], route.injectCss || [])) {
+    await page.addStyleTag({ content: css }).catch(() => {})
+  }
   await sleep(route.waitMs ?? cfg.waitMs)
 }
 
@@ -1103,6 +1132,7 @@ const TYPE_LABEL = {
   'overlap': 'Elements overlap each other',
   'low-contrast': 'Text contrast below WCAG minimum',
   'control-wraps': 'Button/control label wraps onto 3+ lines',
+  'cramped-text': 'Text squeezed to one word per line',
   'text-truncated': 'Text truncated with ellipsis',
   'small-tap-target': 'Tap target smaller than 24×24px',
   'layout-rule': 'Layout rule from the config is broken',

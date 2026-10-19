@@ -67,6 +67,16 @@ El mismo problema visto en varios tamaños, o en todas las filas de una lista, s
 "layoutRules": [{ "selector": ".filtros", "wrap": true, "align": "center" }]
 ```
 
+<table>
+<tr>
+<td><img src="docs/images/stress-home-360-chips.png" width="240" alt="Stress: más chips en banca, filas sin centrar"></td>
+<td><img src="docs/images/stress-ranking-360.png" width="240" alt="Stress: nombres más largos apretados en el ranking"></td>
+</tr>
+<tr><td>Con stress: el triple de chips, filas a la izquierda en vez de centradas</td><td>Con stress: nombres en una palabra por renglón, badges partidos</td></tr>
+</table>
+
+![Sección "Frágil al crecer" del reporte](docs/images/report-stress.png)
+
 ### Correr el script a mano
 
 ```bash

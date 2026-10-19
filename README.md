@@ -69,6 +69,16 @@ The same problem seen at several widths or on every row of a list is reported on
 "layoutRules": [{ "selector": ".filter-chips", "wrap": true, "align": "center" }]
 ```
 
+<table>
+<tr>
+<td><img src="docs/images/stress-home-360-chips.png" width="240" alt="Stress test: more bench chips, rows not centered"></td>
+<td><img src="docs/images/stress-ranking-360.png" width="240" alt="Stress test: longer names squeezed in the ranking"></td>
+</tr>
+<tr><td>Under stress: 3× the chips, rows left-aligned instead of centered</td><td>Under stress: names one word per line, badges broken</td></tr>
+</table>
+
+![Fragile under growth section of the report](docs/images/report-stress.png)
+
 ### Running the script yourself
 
 ```bash
