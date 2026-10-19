@@ -1,0 +1,57 @@
+{
+  "plugin": "webapp-qa",
+  "skills": [
+    {
+      "skill_name": "responsive-check",
+      "evals": [
+        {
+          "id": 1,
+          "name": "padel-app-demo-login",
+          "prompt": "Antes de publicar quiero ver cómo se ve mi app en celular chico, celular normal y compu, en modo claro y oscuro. Está en /home/user/mafisa-padel (React + Vite). Sin Firebase configurado arranca en modo demo; para entrar sin login seteá en localStorage 'padel.demoUser' = {\"uid\":\"demo-user\",\"displayName\":\"Martín\",\"demo\":true}. Revisá Inicio, Ranking, Historial y Sorteo. Quiero capturas con lo que falla marcado y un reporte ordenado por prioridad.",
+          "expected_output": "Annotated screenshots for 4 routes x 3 widths (360/390/1280) x light/dark, taken logged in through the demo user (not a login page), with the real web fonts, and a prioritized report in Spanish.",
+          "files": [],
+          "assertions": [
+            "Screenshots exist for all 4 routes at 360, 390 and 1280px widths",
+            "Both light and dark color schemes were captured and actually differ",
+            "Screenshots show the logged-in app (demo user), not a login or landing page",
+            "Web fonts (Barlow/Rajdhani from Google Fonts) loaded in the screenshots instead of a fallback font",
+            "Problems are marked on the screenshots (boxes/labels drawn on the image)",
+            "A written report orders findings by priority/severity",
+            "The final answer is in Spanish"
+          ]
+        },
+        {
+          "id": 2,
+          "name": "fixture-planted-bugs",
+          "prompt": "I have a tiny static site in /home/user/claude-webapp-qa/tools/fixtures (start it with `node serve.mjs 4790` from that folder; pages are /broken and /ok). Check both pages on mobile (360 and 390) and desktop (1280), light and dark, and tell me everything that breaks the layout, most serious first, with screenshots.",
+          "expected_output": "Finds on /broken: horizontal scroll caused by the 420px .promo banner, the clipped .cta button text, the .tag text spilling out, the ellipsis title, the wrapping .wrap button and the tiny .icon button; reports nothing serious on /ok and does not flag the intentional .scroller.",
+          "files": [],
+          "assertions": [
+            "Reports horizontal scroll on /broken at 360/390 caused by the .promo banner",
+            "Reports the clipped text in the .cta button ('Confirm the reservation')",
+            "Reports the 'Registrations open now' text spilling out of .tag",
+            "Reports the small .icon close button tap target",
+            "Does not report the intentional .scroller as a problem",
+            "Reports /ok as having no serious layout problems",
+            "Horizontal scroll is ranked above cosmetic issues (ellipsis, tap size)",
+            "Annotated screenshots are saved"
+          ]
+        },
+        {
+          "id": 3,
+          "name": "casual-dark-mobile-subset",
+          "prompt": "che, fijate cómo se ven /ranking y /sorteo de /home/user/mafisa-padel en el celu chico en modo oscuro, me parece que algo se sale. el dev server ya está corriendo en localhost:5173. para entrar: localStorage padel.demoUser = {\"uid\":\"demo-user\",\"displayName\":\"Martín\",\"demo\":true}",
+          "expected_output": "Uses the running server, checks only /ranking and /sorteo at 360px dark (maybe also 390), answers in Spanish whether something overflows, with marked screenshots.",
+          "files": [],
+          "assertions": [
+            "Reuses the server already running on localhost:5173 instead of starting another one",
+            "Captures /ranking and /sorteo at about 360px width",
+            "The captured screenshots are in dark mode",
+            "Gives a clear yes/no verdict on whether something overflows, backed by measurements",
+            "Answers in Spanish"
+          ]
+        }
+      ]
+    }
+  ]
+}

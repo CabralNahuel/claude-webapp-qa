@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Broken fixture</title>
+<style>
+  :root { color-scheme: light dark; --bg: #fff; --fg: #111; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #111; --fg: #eee; } }
+  body { margin: 0; font: 16px/1.4 sans-serif; background: var(--bg); color: var(--fg); }
+  header { display: flex; gap: 8px; padding: 12px; position: sticky; top: 0; background: var(--bg); }
+  .promo { width: 420px; padding: 12px; background: #ffd54a; color: #111; }
+  .cta { width: 90px; white-space: nowrap; overflow: hidden; }
+  .tag { width: 110px; white-space: nowrap; border: 1px solid; }
+  .title { width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .icon { width: 16px; height: 16px; padding: 0; border: 0; }
+  .wrap { width: 70px; }
+  .scroller { overflow-x: auto; white-space: nowrap; }
+  .scroller span { display: inline-block; width: 200px; }
+</style>
+</head>
+<body>
+  <header><button class="cta">Confirm the reservation</button><button class="icon" aria-label="Close">×</button></header>
+  <h2 class="title">A very long section title that does not fit</h2>
+  <div class="tag">Registrations open now</div>
+  <button class="wrap">Send the invitation link now</button>
+  <div class="scroller"><span>one</span><span>two</span><span>three</span></div>
+  <div class="promo">Promo banner with a fixed width</div>
+</body>
+</html>

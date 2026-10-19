@@ -1,0 +1,7 @@
+node_modules/
+qa-report/
+*-workspace/
+.DS_Store
+*.log
+.env
+.env.*

@@ -1,0 +1,13 @@
+{
+  "name": "webapp-qa",
+  "version": "0.1.0",
+  "description": "Claude Code skills to QA web apps: responsive checks across devices, UX review, Firestore rules tests and one-PR releases.",
+  "author": {
+    "name": "Nahuel Cabral",
+    "url": "https://github.com/CabralNahuel"
+  },
+  "homepage": "https://github.com/CabralNahuel/claude-webapp-qa",
+  "repository": "https://github.com/CabralNahuel/claude-webapp-qa",
+  "license": "MIT",
+  "keywords": ["qa", "responsive", "playwright", "ux", "firestore", "release", "i18n"]
+}

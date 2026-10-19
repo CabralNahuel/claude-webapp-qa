@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Responsive check</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #fff; --fg: #15181d; --muted: #5b6573; --line: #e2e6eb;
+    --critical: #d1001f; --high: #ff3b30; --medium: #e08600; --low: #2f7cf6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f1216; --card: #171b21; --fg: #e8ebef; --muted: #98a2b0; --line: #2a3039; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, -apple-system, Segoe UI, sans-serif; }
+  main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  h2 { font-size: 18px; margin: 32px 0 12px; }
+  .meta { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+  .stats { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; min-width: 110px; }
+  .stat b { display: block; font-size: 22px; }
+  .stat.critical b { color: var(--critical); } .stat.high b { color: var(--high); }
+  .stat.medium b { color: var(--medium); } .stat.low b { color: var(--low); }
+  .warn { background: #fff4d6; color: #5a4300; border-radius: 10px; padding: 10px 14px; margin: 8px 0; }
+  @media (prefers-color-scheme: dark) { .warn { background: #3a3010; color: #ffe39a; } }
+  .finding { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 16px; background: var(--card);
+    border: 1px solid var(--line); border-left: 5px solid var(--sev); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  @media (max-width: 720px) { .finding { grid-template-columns: 1fr; } }
+  .finding h3 { margin: 0 0 6px; font-size: 16px; }
+  .pill { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em; color: #fff;
+    background: var(--sev); border-radius: 999px; padding: 1px 8px; margin-right: 6px; vertical-align: 2px; }
+  code { font: 12.5px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
+  .finding p { margin: 4px 0; }
+  .finding img { width: 100%; border-radius: 6px; border: 1px solid var(--line); display: block; }
+  .seen { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .seen a, .seen span { font-size: 12px; border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; color: inherit; text-decoration: none; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .screen { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px; }
+  .screen img { width: 100%; border-radius: 6px; display: block; }
+  .screen .cap { font-size: 12px; color: var(--muted); margin-top: 6px; display: flex; justify-content: space-between; gap: 6px; }
+  .ok { color: #1a9b4b; font-weight: 600; }
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script>
+const REPORT = /*__REPORT_DATA__*/null
+const LABEL = {
+  'page-error': 'JavaScript error on the page',
+  'overflow-viewport': 'Element sticks out of the viewport',
+  'text-clipped': 'Text is cut off',
+  'text-overflows-box': 'Text spills out of its container',
+  'control-wraps': 'Button label wraps onto 3+ lines',
+  'text-truncated': 'Text truncated with ellipsis',
+  'small-tap-target': 'Tap target smaller than 24×24px',
+}
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+function render(r) {
+  const s = r.summary
+  const out = []
+  out.push(`<h1>Responsive check</h1><div class="meta">${esc(r.baseUrl)} · ${r.viewports.map((v) => v.width + 'px').join(' / ')} · ${r.themes.join(' + ')} · ${esc(new Date(r.generatedAt).toLocaleString())}</div>`)
+  out.push('<div class="stats">' +
+    `<div class="stat"><b>${s.screens}</b>screens</div>` +
+    ['critical', 'high', 'medium', 'low'].map((k) => `<div class="stat ${k}"><b>${s.bySeverity[k]}</b>${k}</div>`).join('') + '</div>')
+  for (const w of r.warnings) out.push(`<div class="warn">⚠ ${esc(w)}</div>`)
+  out.push('<h2>Findings, most severe first</h2>')
+  if (!r.findings.length) out.push('<p class="ok">No layout problems found.</p>')
+  for (const f of r.findings) {
+    const shot = f.seen.find((x) => x.shot)
+    const d = f.seen[0].detail
+    out.push(`<section class="finding" style="--sev: var(--${f.severity})"><div>
+      <h3><span class="pill">${f.severity.toUpperCase()}</span>${esc(f.id)} · ${esc(LABEL[f.type] || f.type)}</h3>
+      <p>Screen <code>${esc(f.route)}</code>${f.examples.filter(Boolean).length ? " — " + f.examples.filter(Boolean).slice(0, 3).map((t) => "“" + esc(t) + "”").join(", ") + (f.examples.length > 1 ? ` (${f.examples.length} elements)` : "") : ""}</p>
+      <p><code>${esc(f.selector)}</code></p>
+      ${d ? `<p class="meta">${Object.entries(d).map(([k, v]) => esc(k) + ': ' + esc(v)).join(' · ')}</p>` : ''}
+      <div class="seen">${f.seen.map((x) => x.shot ? `<a href="${esc(x.shot)}">${x.width}px ${x.theme} #${x.n}</a>` : `<span>${x.width}px ${x.theme}</span>`).join('')}</div>
+    </div>${shot ? `<a href="${esc(shot.shot)}"><img loading="lazy" src="${esc(shot.shot)}" alt="${esc(f.id)} screenshot"></a>` : '<div></div>'}</section>`)
+  }
+  out.push('<h2>All screens</h2><div class="grid">')
+  for (const sc of r.screens) {
+    const first = sc.shots[0]
+    out.push(`<div class="screen">${first ? `<a href="${esc(first.file)}"><img loading="lazy" src="${esc(first.file)}" alt=""></a>` : ''}
+      <div class="cap"><span><code>${esc(sc.route)}</code></span><span>${sc.viewport.width}px ${sc.theme} · ${sc.issues.length ? sc.issues.length + ' issues' : '<span class="ok">ok</span>'}</span></div></div>`)
+  }
+  out.push('</div>')
+  document.getElementById('app').innerHTML = out.join('')
+}
+render(REPORT)
+</script>
+</body>
+</html>
