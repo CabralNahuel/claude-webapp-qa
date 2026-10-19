@@ -22,6 +22,8 @@ Command-line flags override the config (run the script with `--help`).
 | `ignore` | array | `[]` | Selectors excluded from detection (an intentional marquee, a third-party widget). |
 | `curlHosts` | array | Google Fonts hosts | Hosts fetched with curl and served through `page.route`. Add font CDNs (`use.typekit.net`, `rsms.me`). `[]` disables it. |
 | `block` | array | `[]` | URL glob patterns to abort (analytics, chat widgets). |
+| `stress` | bool / object | — | `true` or `{ "textFactor": 1.4, "repeat": 3, "maxItems": 12, "themes": ["light"], "grow": [], "noGrow": [] }`. Re-measures every screen with grown content (see below). `--stress` on the command line. |
+| `layoutRules` | array | `[]` | Expected reflow, e.g. `{ "selector": ".chips", "wrap": true, "align": "center", "maxRows": 2, "description": "...", "severity": "medium" }`. |
 | `waitMs` | number | 700 | Extra settle time after load. |
 | `maxShotsPerScreen` | number | 4 | Annotated viewport shots per route × viewport × theme. |
 | `deviceScaleFactor` | number | 1 | Use 2 for crisper (heavier) screenshots. |
@@ -44,6 +46,38 @@ Command-line flags override the config (run the script with `--help`).
 - `actions` — `click`, `fill: [selector, value]` and `wait` (ms) steps run
   before measuring. Use them to open a menu or a modal and check it too.
 
+## Stress mode
+
+After the normal measurement of a screen, in the themes listed in
+`stress.themes` (default: the first theme), the page is mutated in place and
+measured again:
+
+- **Text** — every text node grows to `textFactor` × its length. Single
+  words grow as one word (letters doubled, so they cannot wrap), phrases get
+  extra words. Numbers, scores and 1–3 letter initials are left alone.
+- **Groups** — a container whose visible children mostly share tag + classes
+  and sit side by side gets up to `repeat` × as many (max `maxItems`), but
+  only when it wraps (`flex-wrap: wrap`) or its children are pills. Anything
+  inside `nav`, `header`, `table` or a tablist/toolbar/radiogroup is a fixed
+  set and is skipped. `grow` forces a container, `noGrow` excludes one; mark
+  any element with `data-qa-no-stress` to leave it untouched.
+
+Findings that already appear with normal content are not repeated. The rest
+go to `stressFindings` in `issues.json` (ids `S1…`) and to the "Fragile under
+growth" section of the reports, with critical capped at high. Screenshots
+get a `--stress` suffix.
+
+## Layout rules
+
+Each rule applies to every element matching `selector`:
+
+| Field | Check |
+|---|---|
+| `wrap: true` | No child extends past the container's content box: items must go to a new row instead of overflowing. |
+| `align` | `start`, `center` or `end`: every row of children is aligned that way (6px tolerance). |
+| `maxRows` | Children occupy at most this many rows. |
+| `severity` | Severity of a violation (default `medium`). |
+
 ## Output
 
 - `issues.json` — `summary`, `warnings`, merged `findings` (worst first,
@@ -63,6 +97,7 @@ Command-line flags override the config (run the script with `--help`).
 | `text-overflows-box` | Text extends past the block that contains it (`overflow: visible`). |
 | `overlap` | Two pieces of content paint over each other: text lines, or boxes with a background/border (pills, badges). Positioned layers, negative margins and transforms are skipped as intentional. |
 | `low-contrast` | Text below WCAG 1.4.3 contrast (4.5:1, or 3:1 for large text) against its solid backdrop, counting opacity. Skipped over images/gradients. One finding per color pair for the whole app. |
+| `layout-rule` | A `layoutRules` expectation is not met; `detail.problem` says which. |
 | `control-wraps` | A button/tab label breaks onto 3 or more lines. |
 | `text-truncated` | Ellipsis or line-clamp is hiding text. Often intentional; worth a look on buttons and headings. |
 | `small-tap-target` | A control smaller than 24×24px (WCAG 2.5.8), except links inline in a sentence. |

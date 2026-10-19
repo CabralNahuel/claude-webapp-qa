@@ -61,6 +61,39 @@ modo oscuro"), pass `--viewports` / `--themes` instead of running all six
 combinations. Add `phone-xs` (320px) when the audience has older or small
 phones, or when 360px is clean but tight: many collisions only show up there.
 
+### Growth: longer texts, more items
+
+Demo data is short and tidy; real data is not. When the user asks what
+happens "if the name is longer", "if there are more chips", "in German",
+or before a release where content is user-generated, add `"stress": true`.
+Each screen is then measured a second time after the script:
+
+- makes every string ~40% longer (one-word labels become one longer word,
+  so they cannot wrap — like a translation; numbers and initials are kept),
+- triples the members of groups that grow with data: wrapping flex rows and
+  pill-shaped chips (never nav bars, tab bars, toolbars or tables, which
+  have a fixed set). Add selectors to `stress.grow` / `stress.noGrow` when
+  the guess is wrong.
+
+The report lists, under "Fragile under growth", only what breaks *because*
+of the growth (capped at high: it is not broken for users yet).
+
+When the user describes how something should reflow ("the chips should go
+to two centered rows"), encode it as a layout rule so it is checked instead
+of eyeballed:
+
+```json
+"layoutRules": [
+  { "selector": ".filter-chips", "wrap": true, "align": "center", "description": "chips wrap onto centered rows" },
+  { "selector": ".header-actions", "maxRows": 1 }
+]
+```
+
+`wrap` fails if items overflow instead of wrapping, `align` (`start` |
+`center` | `end`) checks every row, `maxRows` caps the rows. Rules run on
+normal and stressed content, so a rule that only fails under stress means
+"fine today, breaks with more data".
+
 ## 3. Run it
 
 ```bash
@@ -151,5 +184,6 @@ Severity guide used by the script (adjust if the context says otherwise):
 | high | Element sticks out of the viewport; text cut off without ellipsis; text spilling out of a button or heading; two pieces of content overlapping (a badge running into a pill) |
 | medium | Text contrast under WCAG 4.5:1 (high when far below); text spilling out of other boxes; button label wrapping to 3+ lines; ellipsis on a button or heading |
 | low | Ellipsis on body text; tap target under 24×24px |
+| (rules) | A `layoutRules` expectation is broken: medium unless the rule sets `severity` |
 
 Do not fix the app's code unless the user asks; offer to.

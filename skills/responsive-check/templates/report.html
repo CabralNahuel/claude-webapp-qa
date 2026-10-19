@@ -57,19 +57,11 @@ const LABEL = {
   'control-wraps': 'Button label wraps onto 3+ lines',
   'text-truncated': 'Text truncated with ellipsis',
   'small-tap-target': 'Tap target smaller than 24×24px',
+  'layout-rule': 'Layout rule from the config is broken',
 }
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
-function render(r) {
-  const s = r.summary
-  const out = []
-  out.push(`<h1>Responsive check</h1><div class="meta">${esc(r.baseUrl)} · ${r.viewports.map((v) => v.width + 'px').join(' / ')} · ${r.themes.join(' + ')} · ${esc(new Date(r.generatedAt).toLocaleString())}</div>`)
-  out.push('<div class="stats">' +
-    `<div class="stat"><b>${s.screens}</b>screens</div>` +
-    ['critical', 'high', 'medium', 'low'].map((k) => `<div class="stat ${k}"><b>${s.bySeverity[k]}</b>${k}</div>`).join('') + '</div>')
-  for (const w of r.warnings) out.push(`<div class="warn">⚠ ${esc(w)}</div>`)
-  out.push('<h2>Findings, most severe first</h2>')
-  if (!r.findings.length) out.push('<p class="ok">No layout problems found.</p>')
-  for (const f of r.findings) {
+function findingCards(out, list) {
+  for (const f of list) {
     const shot = f.seen.find((x) => x.shot)
     const d = f.seen[0].detail
     out.push(`<section class="finding" style="--sev: var(--${f.severity})"><div>
@@ -80,11 +72,30 @@ function render(r) {
       <div class="seen">${f.seen.map((x) => x.shot ? `<a href="${esc(x.shot)}">${x.width}px ${x.theme} #${x.n}</a>` : `<span>${x.width}px ${x.theme}</span>`).join('')}</div>
     </div>${shot ? `<a href="${esc(shot.shot)}"><img loading="lazy" src="${esc(shot.shot)}" alt="${esc(f.id)} screenshot"></a>` : '<div></div>'}</section>`)
   }
+}
+function render(r) {
+  const s = r.summary
+  const out = []
+  out.push(`<h1>Responsive check</h1><div class="meta">${esc(r.baseUrl)} · ${r.viewports.map((v) => v.width + 'px').join(' / ')} · ${r.themes.join(' + ')} · ${esc(new Date(r.generatedAt).toLocaleString())}</div>`)
+  out.push('<div class="stats">' +
+    `<div class="stat"><b>${s.screens}</b>screens</div>` +
+    ['critical', 'high', 'medium', 'low'].map((k) => `<div class="stat ${k}"><b>${s.bySeverity[k]}</b>${k}</div>`).join('') +
+    (r.stress ? `<div class="stat"><b>${s.stressFindings}</b>under growth</div>` : '') + '</div>')
+  for (const w of r.warnings) out.push(`<div class="warn">⚠ ${esc(w)}</div>`)
+  out.push('<h2>Findings, most severe first</h2>')
+  if (!r.findings.length) out.push('<p class="ok">No layout problems found.</p>')
+  findingCards(out, r.findings)
+  if (r.stress) {
+    const st = r.stress
+    out.push(`<h2>Fragile under growth (stress test)</h2><p class="meta">Re-measured with texts ${Math.round((st.textFactor - 1) * 100)}% longer and up to ${st.repeat}× the items in horizontal groups (${esc(st.themes.join(', '))}). Only problems that do not show with the normal content.</p>`)
+    if (!r.stressFindings.length) out.push('<p class="ok">Nothing new breaks when content grows.</p>')
+    findingCards(out, r.stressFindings)
+  }
   out.push('<h2>All screens</h2><div class="grid">')
   for (const sc of r.screens) {
     const first = sc.shots[0]
     out.push(`<div class="screen">${first ? `<a href="${esc(first.file)}"><img loading="lazy" src="${esc(first.file)}" alt=""></a>` : ''}
-      <div class="cap"><span><code>${esc(sc.route)}</code></span><span>${sc.viewport.width}px ${sc.theme} · ${sc.issues.length ? sc.issues.length + ' issues' : '<span class="ok">ok</span>'}</span></div></div>`)
+      <div class="cap"><span><code>${esc(sc.route)}</code>${sc.variant === 'stress' ? ' stress' : ''}</span><span>${sc.viewport.width}px ${sc.theme} · ${sc.issues.length ? sc.issues.length + ' issues' : '<span class="ok">ok</span>'}</span></div></div>`)
   }
   out.push('</div>')
   document.getElementById('app').innerHTML = out.join('')

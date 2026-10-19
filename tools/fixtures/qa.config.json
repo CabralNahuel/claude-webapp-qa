@@ -1,0 +1,11 @@
+{
+  "baseUrl": "http://localhost:4710",
+  "start": { "command": "node serve.mjs 4710" },
+  "routes": ["/broken", "/ok"],
+  "stress": true,
+  "layoutRules": [
+    { "selector": ".chips", "wrap": true, "align": "center", "description": "chips wrap onto centered rows" },
+    { "selector": ".tags-left", "align": "center", "description": "tags rows are centered" }
+  ],
+  "outDir": "../../qa-report/fixtures"
+}

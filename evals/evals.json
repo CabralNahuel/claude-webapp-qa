@@ -54,6 +54,22 @@
             "Gives a clear yes/no verdict on whether something overflows, backed by measurements",
             "Answers in Spanish"
           ]
+        },
+        {
+          "id": 4,
+          "name": "growth-chips-centered",
+          "prompt": "En /home/user/mafisa-padel (dev server ya corriendo en localhost:5173; para entrar: localStorage padel.demoUser = {\"uid\":\"demo-user\",\"displayName\":\"Martín\",\"demo\":true}) quiero saber qué pasa en Inicio y Ranking si los nombres son más largos o se suman más jugadores en banca. Los chips de \"en banca\" de Inicio, si no entran, tienen que pasar a dos filas centradas. Revisalo en celular y compu.",
+          "expected_output": "Measures Inicio and Ranking with grown content (longer names, more bench chips) at phone and desktop widths; reports that the bench chips wrap but the rows are left-aligned instead of centered; separates what is broken today from what only breaks when content grows; annotated screenshots of the grown state; answer in Spanish.",
+          "files": [],
+          "assertions": [
+            "Measures the screens with grown content (longer texts and more bench chips), not only the demo data",
+            "Checks the bench chips at phone and desktop widths",
+            "Reports whether the bench chips wrap instead of overflowing",
+            "Reports that the bench chip rows are left-aligned, not centered as required",
+            "Separates problems present today from problems that only appear when content grows",
+            "Provides screenshots of the grown state with the problems marked",
+            "Answers in Spanish"
+          ]
         }
       ]
     }

@@ -63,6 +63,12 @@ Ask in your own words — "check how the app looks on mobile before I ship", "so
 
 The same problem seen at several widths or on every row of a list is reported once.
 
+**What if the content grows?** With `"stress": true` every screen is measured again with texts ~40% longer and three times the chips/tags/avatars, and the report adds a *Fragile under growth* section with what only breaks then. Describe how things should reflow as rules and they get checked too:
+
+```json
+"layoutRules": [{ "selector": ".filter-chips", "wrap": true, "align": "center" }]
+```
+
 ### Running the script yourself
 
 ```bash

@@ -8,6 +8,8 @@
   body { margin: 0; font: 16px/1.4 sans-serif; }
   main { max-width: 640px; margin: 0 auto; padding: 16px; }
   button { min-height: 44px; padding: 0 16px; }
+  .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+  .chips span { padding: 4px 10px; border: 1px solid; border-radius: 999px; white-space: nowrap; }
   .scroller { overflow-x: auto; white-space: nowrap; }
   .scroller span { display: inline-block; width: 200px; }
 </style>
@@ -17,6 +19,7 @@
     <h1>Everything fits</h1>
     <p>A paragraph with <a href="#">an inline link</a> that wraps normally on small screens.</p>
     <button>Save</button>
+    <div class="chips"><span>Morning</span><span>Evening</span><span>Weekend</span></div>
     <div class="scroller"><span>one</span><span>two</span><span>three</span></div>
   </main>
 </body>

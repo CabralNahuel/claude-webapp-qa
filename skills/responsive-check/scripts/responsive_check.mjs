@@ -48,6 +48,8 @@ const HELP = `responsive-check
   --mask <list>          Comma-separated selectors to black out in screenshots
   --wait <ms>            Extra settle time after load (default 700)
   --max-shots <n>        Max annotated screenshots per screen (default 4)
+  --stress               Also re-measure each screen with grown content: texts 40% longer,
+                         3x the items in horizontal groups (chips, tabs, avatars)
   --no-curl-fonts        Do not proxy font hosts through curl
   --help
 `
@@ -58,7 +60,7 @@ function parseArgs(argv) {
     const a = argv[i]
     if (!a.startsWith('--')) continue
     const key = a.slice(2)
-    if (key === 'help' || key === 'no-curl-fonts') {
+    if (key === 'help' || key === 'no-curl-fonts' || key === 'stress') {
       args[key] = true
       continue
     }
@@ -113,9 +115,20 @@ function loadConfig(args) {
   cfg.curlHosts = cfg.curlHosts ?? DEFAULT_CURL_HOSTS
   cfg.mask = cfg.mask || []
   cfg.ignore = cfg.ignore || []
+  cfg.layoutRules = cfg.layoutRules || []
+  if (args.stress) cfg.stress = cfg.stress || true
+  if (cfg.stress) {
+    cfg.stress = {
+      textFactor: 1.4,
+      repeat: 3,
+      maxItems: 12,
+      themes: [cfg.themes[0]],
+      ...(cfg.stress === true ? {} : cfg.stress),
+    }
+  }
   cfg.auth = cfg.auth || {}
   if (cfg.auth.script) cfg.auth.script = path.resolve(base, cfg.auth.script)
-  if (cfg.start?.cwd) cfg.start.cwd = path.resolve(base, cfg.start.cwd)
+  if (cfg.start && !args.cwd) cfg.start.cwd = path.resolve(base, cfg.start.cwd || '.')
   return cfg
 }
 
@@ -596,6 +609,164 @@ function detectIssues({ ignore }) {
   return { page, issues }
 }
 
+// Runs inside the page. Simulates content growth: longer strings (as after
+// translation or with real user data) and more items in horizontal groups
+// (chips, tabs, avatars, header buttons). Layouts that look fine with demo
+// data often break with the first long name or the fourth chip.
+function applyStress({ textFactor, repeat, maxItems, ignore, grow = [], noGrow = [] }) {
+  const skip = (el) =>
+    !el || el.closest('script, style, noscript, textarea, svg, [data-qa-no-stress]') ||
+    ignore.some((sel) => el.closest(sel))
+  const visible = (el) => {
+    const r = el.getBoundingClientRect()
+    return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden'
+  }
+  const sig = (el) => el.tagName + '.' + [...el.classList].sort().join('.')
+
+  // 1. Groups that grow with data (chips, tags, avatars, filter pills) get
+  //    more members. Navigation, tab bars, toolbars and tables have a fixed
+  //    set of items, so they are never multiplied; vertical lists only get
+  //    longer, which rarely breaks anything.
+  const fixedSet = 'nav, header, table, [role="tablist"], [role="radiogroup"], [role="toolbar"], [role="menubar"]'
+  const pill = (el) => {
+    const st = getComputedStyle(el)
+    const r = el.getBoundingClientRect()
+    return parseFloat(st.borderTopLeftRadius) >= r.height / 2 - 1 && r.width > r.height
+  }
+  let cloned = 0
+  for (const el of [...document.body.querySelectorAll('*')]) {
+    if (skip(el) || noGrow.some((sel) => el.matches(sel))) continue
+    const explicit = grow.some((sel) => el.matches(sel))
+    if (!explicit && el.closest(fixedSet)) continue
+    const kids = [...el.children].filter(visible)
+    if (kids.length < 2) continue
+    const groups = new Map()
+    for (const k of kids) groups.set(sig(k), [...(groups.get(sig(k)) || []), k])
+    const [, alike] = [...groups].sort((a, b) => b[1].length - a[1].length)[0]
+    if (alike.length < 2 || alike.length / kids.length < 0.6) continue
+    const tops = new Set(alike.map((k) => Math.round(k.getBoundingClientRect().top)))
+    if (!explicit) {
+      if (tops.size === alike.length) continue // stacked vertically
+      const wraps = getComputedStyle(el).flexWrap === 'wrap'
+      if (!wraps && !alike.every(pill)) continue // a fixed row of controls
+    }
+    const target = Math.min(alike.length * repeat, maxItems)
+    const last = alike[alike.length - 1]
+    for (let i = alike.length; i < target; i++) {
+      const copy = alike[i % alike.length].cloneNode(true)
+      copy.removeAttribute('id')
+      copy.querySelectorAll('[id]').forEach((n) => n.removeAttribute('id'))
+      last.after(copy)
+      cloned++
+    }
+  }
+
+  // 2. Every string grows by textFactor. One-word labels grow as a single
+  //    longer word (it cannot wrap, like a German compound); phrases grow
+  //    with extra words.
+  let grown = 0
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+  const nodes = []
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) nodes.push(n)
+  for (const node of nodes) {
+    const text = node.textContent
+    const core = text.trim()
+    // Numbers, scores and initials ("NR", "8VA") keep their length in any
+    // language or with any data.
+    if (!core || skip(node.parentElement)) continue
+    if (/^[\d\s.,:;+\-\u2212–—%/()#·•|×▲▼]+$/.test(core)) continue
+    if (/\d/.test(core) && core.length <= 6) continue
+    if (/^\p{Lu}{1,3}$/u.test(core)) continue
+    const target = Math.ceil(core.length * textFactor)
+    let out = core
+    if (!/\s/.test(core)) {
+      // Double letters left to right (vowels first) until it is long enough.
+      const isVowel = (c) => /[aeiouáéíóú]/i.test(c)
+      while (out.length < target) {
+        let next = ''
+        let extra = target - out.length
+        const anyVowel = [...out].some(isVowel)
+        for (const c of out) {
+          next += c
+          if (extra > 0 && (isVowel(c) || !anyVowel) && /\p{L}/u.test(c)) {
+            next += c
+            extra--
+          }
+        }
+        if (next.length === out.length) next += out.slice(-1)
+        out = next
+      }
+    } else {
+      const words = core.split(/\s+/)
+      let i = 0
+      while (out.length < target) out += ' ' + words[i++ % words.length]
+    }
+    node.textContent = text.replace(core, out)
+    grown++
+  }
+  document.documentElement.dataset.qaStress = '1'
+  return { cloned, grown }
+}
+
+// Runs inside the page. Checks layout expectations declared in the config,
+// e.g. { "selector": ".chips", "wrap": true, "align": "center" }: the chips
+// must wrap onto new rows (not overflow) and every row must be centered.
+function checkRules({ rules }) {
+  const els = window.__qaEls || (window.__qaEls = [])
+  const issues = []
+  for (const rule of rules) {
+    for (const el of document.querySelectorAll(rule.selector)) {
+      const r = el.getBoundingClientRect()
+      if (r.width < 1 || r.height < 1) continue
+      const st = getComputedStyle(el)
+      const left = r.left + parseFloat(st.paddingLeft) + parseFloat(st.borderLeftWidth)
+      const right = r.right - parseFloat(st.paddingRight) - parseFloat(st.borderRightWidth)
+      const kids = [...el.children].map((k) => [k, k.getBoundingClientRect()]).filter(([, b]) => b.width > 0)
+      const problems = []
+      if (rule.wrap) {
+        const out = kids.filter(([, b]) => b.right > right + 1 || b.left < left - 1)
+        if (out.length) problems.push(`${out.length} item(s) overflow instead of wrapping onto a new row`)
+      }
+      if (rule.align && kids.length) {
+        const rows = []
+        for (const [, b] of kids) {
+          const row = rows.find((x) => Math.abs(x.top - b.top) < 4)
+          if (row) {
+            row.l = Math.min(row.l, b.left)
+            row.r = Math.max(row.r, b.right)
+          } else rows.push({ top: b.top, l: b.left, r: b.right })
+        }
+        rows.forEach((row, i) => {
+          const gapL = row.l - left
+          const gapR = right - row.r
+          const bad =
+            rule.align === 'center' ? Math.abs(gapL - gapR) > 6 :
+            rule.align === 'start' ? gapL > 6 :
+            rule.align === 'end' ? gapR > 6 : false
+          if (bad) problems.push(`row ${i + 1} is not ${rule.align}-aligned (left gap ${Math.round(gapL)}px, right gap ${Math.round(gapR)}px)`)
+        })
+      }
+      if (rule.maxRows && kids.length) {
+        const tops = new Set(kids.map(([, b]) => Math.round(b.top / 4)))
+        if (tops.size > rule.maxRows) problems.push(`items take ${tops.size} rows (max ${rule.maxRows})`)
+      }
+      if (!problems.length) continue
+      els.push(el)
+      issues.push({
+        index: els.length - 1,
+        type: 'layout-rule',
+        severity: rule.severity || 'medium',
+        selector: rule.selector,
+        tag: el.tagName.toLowerCase(),
+        text: (el.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 80),
+        detail: { rule: rule.description || JSON.stringify({ wrap: rule.wrap, align: rule.align, maxRows: rule.maxRows }), problem: problems.join('; ') },
+        rect: { x: Math.round(r.left + scrollX), y: Math.round(r.top + scrollY), width: Math.round(r.width), height: Math.round(r.height) },
+      })
+    }
+  }
+  return issues
+}
+
 // Draw numbered boxes around the given issue indexes (inside the page).
 function annotate({ items, banner }) {
   document.getElementById('__qa_overlay')?.remove()
@@ -675,6 +846,42 @@ function planShots(issues, viewportHeight, max) {
     else shots[shots.length - 1].items.push(issue) // shown in list, maybe off-shot
   }
   return shots
+}
+
+// Measure the current layout, then take annotated viewport screenshots.
+async function measureScreen(page, cfg, vp, id, shotsDir, errors) {
+  await page.evaluate(() => scrollTo(0, 0))
+  const { page: pageInfo, issues } = await page.evaluate(detectIssues, { ignore: cfg.ignore })
+  if (cfg.layoutRules.length) issues.push(...(await page.evaluate(checkRules, { rules: cfg.layoutRules })))
+  for (const e of errors) {
+    issues.push({ type: 'page-error', severity: 'critical', selector: '(page)', text: e.slice(0, 200), rect: { x: 0, y: 0, width: 0, height: 0 }, index: -1 })
+  }
+  issues.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] || a.rect.y - b.rect.y)
+  issues.forEach((i, n) => (i.n = n + 1))
+
+  const banner = pageInfo.horizontalScroll
+    ? `↔ Horizontal scroll: ${pageInfo.documentWidth}px content in ${pageInfo.viewportWidth}px`
+    : null
+  const plan = planShots(issues.filter((i) => i.index >= 0), vp.height, cfg.maxShotsPerScreen)
+  const shots = []
+  for (let s = 0; s < plan.length; s++) {
+    const shot = plan[s]
+    await page.evaluate((y) => scrollTo(0, y), shot.scrollY)
+    await sleep(150)
+    await page.evaluate(annotate, {
+      items: shot.items.map((i) => ({ index: i.index, n: i.n, severity: i.severity })),
+      banner: s === 0 ? banner : null,
+    })
+    const file = `${id}--${s + 1}.png`
+    await page.screenshot({
+      path: path.join(shotsDir, file),
+      mask: cfg.mask.map((sel) => page.locator(sel)),
+      maskColor: '#222',
+    })
+    shots.push({ file: `screenshots/${file}`, scrollY: shot.scrollY, issues: shot.items.map((i) => i.n) })
+    await page.evaluate(() => document.getElementById('__qa_overlay')?.remove())
+  }
+  return { page: pageInfo, issues: issues.map(({ key, index, ...rest }) => rest), shots }
 }
 
 async function applyAuth(context, cfg) {
@@ -773,41 +980,22 @@ async function run() {
           }
           const finalUrl = page.url()
           const fonts = await fontReport(page)
-          await page.evaluate(() => scrollTo(0, 0))
-          const { page: pageInfo, issues } = await page.evaluate(detectIssues, { ignore: cfg.ignore })
-          for (const e of errors) {
-            issues.push({ type: 'page-error', severity: 'critical', selector: '(page)', text: e.slice(0, 200), rect: { x: 0, y: 0, width: 0, height: 0 }, index: -1 })
-          }
-          issues.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] || a.rect.y - b.rect.y)
-          issues.forEach((i, n) => (i.n = n + 1))
-
-          const banner = pageInfo.horizontalScroll
-            ? `↔ Horizontal scroll: ${pageInfo.documentWidth}px content in ${pageInfo.viewportWidth}px`
-            : null
-          const located = issues.filter((i) => i.index >= 0)
-          const plan = planShots(located, vp.height, cfg.maxShotsPerScreen)
-          const shots = []
-          for (let s = 0; s < plan.length; s++) {
-            const shot = plan[s]
-            await page.evaluate((y) => scrollTo(0, y), shot.scrollY)
-            await sleep(150)
-            await page.evaluate(annotate, {
-              items: shot.items.map((i) => ({ index: i.index, n: i.n, severity: i.severity })),
-              banner: s === 0 ? banner : null,
+          const variants = ['normal']
+          if (cfg.stress && cfg.stress.themes.includes(theme)) variants.push('stress')
+          for (const variant of variants) {
+            let stressInfo = null
+            if (variant === 'stress') {
+              await page.evaluate(() => scrollTo(0, 0))
+              stressInfo = await page.evaluate(applyStress, { ...cfg.stress, ignore: cfg.ignore })
+              await sleep(250)
+            }
+            const vid = variant === 'stress' ? `${id}--stress` : id
+            const measured = await measureScreen(page, cfg, vp, vid, shotsDir, variant === 'normal' ? errors : [])
+            results.push({
+              id: vid, route: route.path, name, finalUrl, status, viewport: vp, theme, variant, stress: stressInfo,
+              fonts, ...measured,
             })
-            const file = `${id}--${s + 1}.png`
-            await page.screenshot({
-              path: path.join(shotsDir, file),
-              mask: cfg.mask.map((sel) => page.locator(sel)),
-              maskColor: '#222',
-            })
-            shots.push({ file: `screenshots/${file}`, scrollY: shot.scrollY, issues: shot.items.map((i) => i.n) })
-            await page.evaluate(() => document.getElementById('__qa_overlay')?.remove())
           }
-          results.push({
-            id, route: route.path, name, finalUrl, status, viewport: vp, theme,
-            page: pageInfo, fonts, issues: issues.map(({ key, index, ...rest }) => rest), shots,
-          })
         }
         await context.close()
       }
@@ -827,7 +1015,8 @@ async function run() {
   )
   const s = report.summary
   log(`\nDone: ${s.findings} findings (${s.bySeverity.critical} critical, ${s.bySeverity.high} high, ` +
-    `${s.bySeverity.medium} medium, ${s.bySeverity.low} low) across ${results.length} screens.`)
+    `${s.bySeverity.medium} medium, ${s.bySeverity.low} low) across ${s.screens} screens.` +
+    (report.stress ? ` Stress test: ${s.stressFindings} more when content grows.` : ''))
   log(`Report: ${path.join(cfg.outDir, 'report.md')}`)
   process.stdout.write(JSON.stringify({ outDir: cfg.outDir, summary: s }) + '\n')
 }
@@ -842,13 +1031,15 @@ function buildReport(cfg, results, curlFailures) {
       const generic = i.selector.replace(/:nth-of-type\(\d+\)/g, '')
       // A color pair is one design-token decision: report it once for the
       // whole app, wherever it shows up.
-      const key = i.type === 'low-contrast'
+      const variant = r.variant || 'normal'
+      const key = variant + '|' + (i.type === 'low-contrast'
         ? `${i.type}|${r.theme}|${i.detail.color}|${i.detail.background}`
-        : `${r.route}|${i.type}|${generic}`
+        : `${r.route}|${i.type}|${generic}` +
+          (i.type === 'layout-rule' ? '|' + i.detail.problem.replace(/[\d.]+/g, '#') : ''))
       const shot = r.shots.find((s) => s.issues.includes(i.n))
       const seen = { viewport: r.viewport.name, width: r.viewport.width, theme: r.theme, n: i.n, shot: shot?.file, detail: i.detail }
       if (!findings.has(key)) {
-        findings.set(key, { route: r.route, routes: [r.route], type: i.type, severity: i.severity, selector: generic, text: i.text, examples: [i.text], seen: [seen] })
+        findings.set(key, { variant, route: r.route, routes: [r.route], type: i.type, severity: i.severity, selector: generic, text: i.text, examples: [i.text], seen: [seen] })
       } else {
         const f = findings.get(key)
         if (!f.routes.includes(r.route)) f.routes.push(r.route)
@@ -858,28 +1049,48 @@ function buildReport(cfg, results, curlFailures) {
       }
     }
   }
-  const list = [...findings.values()].sort(
-    (a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] || b.seen.length - a.seen.length,
-  )
+  // A problem that already shows with normal content is not repeated in the
+  // stress section: there we only want what growth *adds*.
+  const normalKeys = new Set([...findings.keys()].filter((k) => k.startsWith('normal|')).map((k) => k.slice(7)))
+  for (const k of [...findings.keys()]) {
+    if (k.startsWith('stress|') && normalKeys.has(k.slice(7))) findings.delete(k)
+  }
+  const sortF = (a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] || b.seen.length - a.seen.length
+  const list = [...findings.values()].filter((f) => f.variant === 'normal').sort(sortF)
+  // Under stress nothing is broken *yet*: cap at high so real, current
+  // problems stay on top.
+  for (const f of findings.values()) if (f.variant === 'stress' && f.severity === 'critical') f.severity = 'high'
+  const stressList = [...findings.values()].filter((f) => f.variant === 'stress').sort(sortF)
   list.forEach((f, i) => (f.id = `F${i + 1}`))
+  stressList.forEach((f, i) => (f.id = `S${i + 1}`))
   const bySeverity = { critical: 0, high: 0, medium: 0, low: 0 }
   for (const f of list) bySeverity[f.severity]++
+  const stressBySeverity = { critical: 0, high: 0, medium: 0, low: 0 }
+  for (const f of stressList) stressBySeverity[f.severity]++
   const fontsFailed = [...new Set(results.flatMap((r) => r.fonts?.failed || []))]
   return {
     generatedAt: new Date().toISOString(),
     baseUrl: cfg.baseUrl,
     viewports: cfg.viewports,
     themes: cfg.themes,
-    summary: { screens: results.length, findings: list.length, bySeverity },
+    stress: cfg.stress || null,
+    summary: {
+      screens: results.filter((r) => r.variant !== 'stress').length,
+      findings: list.length,
+      bySeverity,
+      stressFindings: stressList.length,
+      stressBySeverity,
+    },
     warnings: [
       ...fontsFailed.map((f) => `Font "${f}" failed to load: screenshots use a fallback font and widths may differ.`),
       ...curlFailures.map((u) => `Could not fetch through curl: ${u}`),
       ...results.filter((r) => r.error).map((r) => `${r.route} (${r.viewport.name}, ${r.theme}): ${r.error}`),
       ...results
-        .filter((r) => r.finalUrl && new URL(r.finalUrl).pathname !== r.route.split('?')[0])
+        .filter((r) => r.variant !== 'stress' && r.finalUrl && new URL(r.finalUrl).pathname !== r.route.split('?')[0])
         .map((r) => `${r.route} redirected to ${new URL(r.finalUrl).pathname} (${r.viewport.name}, ${r.theme}) — check the login/demo setup.`),
     ].filter((w, i, a) => a.indexOf(w) === i),
     findings: list,
+    stressFindings: stressList,
     screens: results,
   }
 }
@@ -894,6 +1105,7 @@ const TYPE_LABEL = {
   'control-wraps': 'Button/control label wraps onto 3+ lines',
   'text-truncated': 'Text truncated with ellipsis',
   'small-tap-target': 'Tap target smaller than 24×24px',
+  'layout-rule': 'Layout rule from the config is broken',
 }
 
 function renderMarkdown(report) {
@@ -911,7 +1123,24 @@ function renderMarkdown(report) {
   }
   out.push('## Findings', '')
   if (!report.findings.length) out.push('No layout problems found.', '')
-  for (const f of report.findings) {
+  renderFindings(out, report.findings)
+  if (report.stress) {
+    const st = report.stress
+    out.push('## Fragile under growth (stress test)', '',
+      `Re-measured with texts ${Math.round((st.textFactor - 1) * 100)}% longer and up to ${st.repeat}× the items in horizontal groups (${st.themes.join(', ')}). ` +
+      'Only problems that do not show with the normal content are listed.', '')
+    if (!report.stressFindings.length) out.push('Nothing new breaks when content grows.', '')
+    renderFindings(out, report.stressFindings)
+  }
+  out.push('## Screens', '', '| Screen | Viewport | Theme | Issues | Screenshots |', '|---|---|---|---|---|')
+  for (const r of report.screens) {
+    out.push(`| \`${r.route}\`${r.variant === 'stress' ? ' (stress)' : ''} | ${r.viewport.width}px | ${r.theme} | ${r.issues.length} | ${r.shots.map((x, i) => `[${i + 1}](${x.file})`).join(' ')} |`)
+  }
+  return out.join('\n') + '\n'
+}
+
+function renderFindings(out, findings) {
+  for (const f of findings) {
     const where = f.seen.map((x) => `${x.width}px ${x.theme}`).join(', ')
     out.push(`### ${f.id} · ${f.severity.toUpperCase()} · ${TYPE_LABEL[f.type] || f.type}`)
     out.push('')
@@ -924,11 +1153,6 @@ function renderMarkdown(report) {
     if (shot) out.push(`- Screenshot: [${shot.shot}](${shot.shot}) (marker #${shot.n})`)
     out.push('')
   }
-  out.push('## Screens', '', '| Screen | Viewport | Theme | Issues | Screenshots |', '|---|---|---|---|---|')
-  for (const r of report.screens) {
-    out.push(`| \`${r.route}\` | ${r.viewport.width}px | ${r.theme} | ${r.issues.length} | ${r.shots.map((x, i) => `[${i + 1}](${x.file})`).join(' ')} |`)
-  }
-  return out.join('\n') + '\n'
 }
 
 run().catch((err) => {

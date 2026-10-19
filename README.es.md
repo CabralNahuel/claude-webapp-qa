@@ -61,6 +61,12 @@ Pedilo como te salga: "fijate cómo se ve en el celu antes de publicar", "en /ch
 
 El mismo problema visto en varios tamaños, o en todas las filas de una lista, se reporta una sola vez.
 
+**¿Y si el contenido crece?** Con `"stress": true` cada pantalla se vuelve a medir con los textos ~40% más largos y el triple de chips/etiquetas/avatares, y el reporte suma una sección *Frágil al crecer* con lo que solo se rompe ahí. Si describís cómo tiene que reacomodarse algo, se convierte en una regla y también se verifica:
+
+```json
+"layoutRules": [{ "selector": ".filtros", "wrap": true, "align": "center" }]
+```
+
 ### Correr el script a mano
 
 ```bash

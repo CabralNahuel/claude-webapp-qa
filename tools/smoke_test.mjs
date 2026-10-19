@@ -134,6 +134,44 @@ if (!hasPlaywright) {
   const shot = small.shots[0] && path.join(out, small.shots[0].file)
   check(Boolean(shot && fs.statSync(shot).size > 1000), 'writes annotated screenshots')
   fs.rmSync(out, { recursive: true, force: true })
+
+  // Stress mode + layout rules (from tools/fixtures/qa.config.json).
+  const out2 = fs.mkdtempSync(path.join(os.tmpdir(), 'webapp-qa-stress-'))
+  const port2 = String(Number(port) + 1)
+  execFileSync(
+    process.execPath,
+    [
+      path.join(skillsDir, 'responsive-check/scripts/responsive_check.mjs'),
+      '--config', path.join(ROOT, 'tools/fixtures/qa.config.json'),
+      '--url', `http://localhost:${port2}`,
+      '--start', `"${process.execPath}" "${path.join(ROOT, 'tools/fixtures/serve.mjs')}" ${port2}`,
+      '--viewports', 'phone-small',
+      '--themes', 'light',
+      '--out', out2,
+      '--wait', '100',
+    ],
+    { stdio: ['ignore', 'pipe', 'inherit'] },
+  )
+  const stress = JSON.parse(fs.readFileSync(path.join(out2, 'issues.json'), 'utf8'))
+  const sf = stress.stressFindings || []
+  check(stress.screens.some((x) => x.variant === 'stress'), 'stress: screens are re-measured with grown content')
+  check(
+    sf.some((f) => f.type === 'overflow-viewport' && f.selector.includes('chips')),
+    'stress: chips without flex-wrap overflow once there are more of them',
+  )
+  check(
+    sf.some((f) => f.type === 'layout-rule' && f.selector === '.chips' && /overflow instead of wrapping/.test(f.seen[0].detail.problem)),
+    'stress: the "chips wrap" rule reports items that do not wrap',
+  )
+  check(
+    stress.findings.some((f) => f.type === 'layout-rule' && f.selector === '.tags-left'),
+    'layout rule: left-aligned tags break the "centered" rule',
+  )
+  check(
+    ![...stress.findings, ...sf].some((f) => f.routes.includes('/ok')),
+    '/ok stays clean under stress and its centered chips pass the rule',
+  )
+  fs.rmSync(out2, { recursive: true, force: true })
 }
 
 console.log(failures ? `\n${failures} check(s) failed` : '\nAll checks passed')
