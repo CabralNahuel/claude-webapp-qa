@@ -40,12 +40,12 @@ Pedilo como te salga: "fijate cómo se ve en el celu antes de publicar", "en /ch
 <table>
 <tr>
 <td><img src="docs/images/annotated-historial-360-light.png" width="240" alt="Captura marcada en celular, modo claro"></td>
-<td><img src="docs/images/annotated-home-360-dark.png" width="240" alt="Captura marcada en celular, modo oscuro"></td>
+<td><img src="docs/images/annotated-ranking-360-dark.png" width="240" alt="Captura marcada en celular, modo oscuro"></td>
 <td><img src="docs/images/annotated-fixture-360-light.png" width="240" alt="Captura marcada de una página con errores sembrados"></td>
 </tr>
 <tr>
-<td>360px, claro: botones chicos para el dedo</td>
-<td>360px, oscuro</td>
+<td>360px, claro: poco contraste y botones chicos</td>
+<td>360px, oscuro: "▼ -27" se mete en el badge</td>
 <td>Página de prueba con errores a propósito</td>
 </tr>
 </table>
@@ -55,8 +55,8 @@ Pedilo como te salga: "fijate cómo se ve en el celu antes de publicar", "en /ch
 | Prioridad | Hallazgo |
 |---|---|
 | crítica | La página scrollea de costado · error de JavaScript al cargar |
-| alta | Un elemento se sale de la pantalla · texto cortado sin "…" · texto que se sale de un botón o título |
-| media | Texto que se sale de otras cajas · botón con el texto en 3+ líneas · "…" en botones o títulos |
+| alta | Un elemento se sale de la pantalla · texto cortado sin "…" · texto que se sale de un botón o título · contenido que se pisa (un badge que se mete en otro) |
+| media | Contraste de texto bajo WCAG 4,5:1 · texto que se sale de otras cajas · botón con el texto en 3+ líneas · "…" en botones o títulos |
 | baja | "…" en texto común · objetivo táctil de menos de 24×24px (WCAG 2.5.8) |
 
 El mismo problema visto en varios tamaños, o en todas las filas de una lista, se reporta una sola vez.

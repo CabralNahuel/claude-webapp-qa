@@ -56,6 +56,11 @@ Set `locale` to the app's real audience: the browser defaults to en-US and
 many apps switch language from it, and Spanish or German strings are longer —
 which is precisely where layouts break.
 
+If the user only cares about some widths or one theme ("el celu chico en
+modo oscuro"), pass `--viewports` / `--themes` instead of running all six
+combinations. Add `phone-xs` (320px) when the audience has older or small
+phones, or when 360px is clean but tight: many collisions only show up there.
+
 ## 3. Run it
 
 ```bash
@@ -100,10 +105,12 @@ whether it matters:
 - **Check the redirect warning.** If a route redirected (e.g. to `/login`),
   the auth setup is wrong and every screenshot of it shows the wrong page.
   Fix the config and rerun rather than reporting on the login screen.
-- **Look for what the detector cannot see**: dark-mode text with too little
-  contrast, an image squashed, a fixed bar covering the last item, content
-  hidden behind the on-screen keyboard. Mention these separately as
-  "seen in screenshots".
+- **Look for what the detector cannot see**: contrast over images or
+  gradients (it only measures solid backgrounds), an image squashed, a fixed bar covering the last item, a gap
+  between two stacked fixed bars (a floating button above a tab bar) where
+  the list shows through, content hidden behind the on-screen keyboard.
+  Mention these separately as "seen in screenshots". Check the bottom of
+  each scrolled shot: that is where fixed bars meet content.
 - **Do not leak people's data.** If screenshots show real names, emails or
   photos (not demo data), add their selectors to `mask` and rerun before
   sharing images.
@@ -141,8 +148,8 @@ Severity guide used by the script (adjust if the context says otherwise):
 | Severity | What |
 |---|---|
 | critical | Page scrolls horizontally; JavaScript error on the page |
-| high | Element sticks out of the viewport; text cut off without ellipsis; text spilling out of a button or heading |
-| medium | Text spilling out of other boxes; button label wrapping to 3+ lines; ellipsis on a button or heading |
+| high | Element sticks out of the viewport; text cut off without ellipsis; text spilling out of a button or heading; two pieces of content overlapping (a badge running into a pill) |
+| medium | Text contrast under WCAG 4.5:1 (high when far below); text spilling out of other boxes; button label wrapping to 3+ lines; ellipsis on a button or heading |
 | low | Ellipsis on body text; tap target under 24×24px |
 
 Do not fix the app's code unless the user asks; offer to.

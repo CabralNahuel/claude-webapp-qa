@@ -25,6 +25,8 @@ const DEFAULT_VIEWPORTS = [
   { name: 'phone', width: 390, height: 844, mobile: true },
   { name: 'desktop', width: 1280, height: 800, mobile: false },
 ]
+// Not in the default set; pass --viewports phone-xs,... for older/smaller phones.
+const EXTRA_VIEWPORTS = [{ name: 'phone-xs', width: 320, height: 568, mobile: true }]
 const DEFAULT_THEMES = ['light', 'dark']
 const DEFAULT_CURL_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com']
 
@@ -121,7 +123,7 @@ function resolveViewports(spec) {
   if (!spec) return DEFAULT_VIEWPORTS
   return spec.map((v) => {
     if (typeof v === 'object') return { mobile: v.width < 768, ...v }
-    const known = DEFAULT_VIEWPORTS.find((d) => d.name === v)
+    const known = [...DEFAULT_VIEWPORTS, ...EXTRA_VIEWPORTS].find((d) => d.name === v)
     if (known) return known
     const m = /^(\d+)x(\d+)$/.exec(v)
     if (!m) throw new Error(`Unknown viewport "${v}"`)
@@ -434,7 +436,134 @@ function detectIssues({ ignore }) {
     }
   }
 
-  // 5. Controls whose label wraps onto 3+ lines, and tiny tap targets.
+  // 5. Content boxes that overlap each other (a badge running into a pill,
+  // a word into the next column). Skips positioned layers (badges on
+  // avatars, fixed bars, overlays), which overlap on purpose.
+  // Positioned layers, negative margins and transforms are how designs
+  // overlap things on purpose (stacked avatars, badges on icons, fixed bars).
+  const layered = (el) => {
+    for (let n = el; n && n !== document.body; n = n.parentElement) {
+      const st = style(n)
+      if (['absolute', 'fixed', 'sticky'].includes(st.position)) return true
+      if (st.transform !== 'none') return true
+      if (parseFloat(st.marginLeft) < 0 || parseFloat(st.marginTop) < 0 ||
+        parseFloat(st.marginRight) < 0 || parseFloat(st.marginBottom) < 0) return true
+    }
+    return false
+  }
+  // What a leaf actually paints: its text, line by line (so a <strong> that
+  // wraps does not count as its whole bounding box), or its own box for
+  // images and form controls.
+  const paintsBox = (st) =>
+    (st.backgroundColor !== 'rgba(0, 0, 0, 0)' && st.backgroundColor !== 'transparent') ||
+    st.backgroundImage !== 'none' || parseFloat(st.borderLeftWidth) > 0 || parseFloat(st.borderTopWidth) > 0
+  function paintRects(el) {
+    if (el.matches('img, svg, input, select, textarea')) return [el.getBoundingClientRect()]
+    // A pill or badge paints its whole box; colliding with that is visible.
+    const rects = paintsBox(style(el)) ? [Object.assign(el.getBoundingClientRect(), {})] : []
+    rects.forEach((r) => (r.box = true))
+    for (const n of el.childNodes) {
+      if (n.nodeType !== 3 || !n.textContent.trim()) continue
+      const range = document.createRange()
+      range.selectNodeContents(n)
+      rects.push(...[...range.getClientRects()].filter((r) => r.width > 1 && r.height > 1))
+    }
+    return rects
+  }
+  const leaves = shown
+    .filter((el) => el.matches('img, svg, input, select, textarea') ||
+      [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()))
+    .filter((el) => !el.closest('svg *') && !layered(el))
+    .slice(0, 1500)
+  const paints = leaves.map(paintRects)
+  const hit = (A, B) => {
+    const w = Math.min(A.right, B.right) - Math.max(A.left, B.left)
+    const h = Math.min(A.bottom, B.bottom) - Math.max(A.top, B.top)
+    // Line boxes of adjacent text lines touch a little; demand a real bite.
+    const need = A.box || B.box ? 2 : Math.min(A.height, B.height) * 0.3
+    return w > 2 && h > need ? { w, h } : null
+  }
+  for (let a = 0; a < leaves.length; a++) {
+    for (let b = a + 1; b < leaves.length; b++) {
+      if (leaves[a].contains(leaves[b]) || leaves[b].contains(leaves[a])) continue
+      let found = null
+      for (const A of paints[a]) {
+        for (const B of paints[b]) if ((found = hit(A, B))) break
+        if (found) break
+      }
+      if (!found) continue
+      add(leaves[b], 'overlap', 'high', {
+        overlapsWith: selectorOf(leaves[a]),
+        overlapPx: `${Math.round(found.w)}x${Math.round(found.h)}`,
+      })
+    }
+  }
+
+  // 6. Text with too little contrast against what is behind it (WCAG 1.4.3:
+  // 4.5:1, or 3:1 for large text). Dark mode is where this usually slips.
+  const ctx = document.createElement('canvas').getContext('2d', { willReadFrequently: true })
+  const rgbaCache = new Map()
+  function rgba(color) {
+    if (!rgbaCache.has(color)) {
+      // Normalize any CSS color (oklch, color-mix…) by painting one pixel.
+      ctx.clearRect(0, 0, 1, 1)
+      ctx.fillStyle = '#000'
+      ctx.fillStyle = color
+      ctx.fillRect(0, 0, 1, 1)
+      const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data
+      rgbaCache.set(color, [r, g, b, a / 255])
+    }
+    return rgbaCache.get(color)
+  }
+  const over = (top, under) => {
+    const a = top[3]
+    return [0, 1, 2].map((i) => top[i] * a + under[i] * (1 - a)).concat(1)
+  }
+  const luminance = ([r, g, b]) => {
+    const f = (c) => ((c /= 255) <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
+    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
+  }
+  // Solid color behind the element, or null when an image/gradient is in
+  // the way and the real backdrop cannot be known from styles.
+  function backdrop(el) {
+    const layers = []
+    for (let n = el; n; n = n.parentElement) {
+      const st = style(n)
+      if (st.backgroundImage !== 'none') return null
+      const c = rgba(st.backgroundColor)
+      if (c[3] > 0) layers.push(c)
+      if (c[3] >= 1) break
+    }
+    let color = [255, 255, 255, 1]
+    for (const layer of layers.reverse()) color = over(layer, color)
+    return color
+  }
+  for (const el of shown) {
+    if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue
+    const st = style(el)
+    if (st.webkitTextFillColor && st.webkitTextFillColor !== st.color && rgba(st.webkitTextFillColor)[3] === 0) continue // gradient text
+    const bg = backdrop(el)
+    if (!bg) continue
+    let opacity = 1
+    for (let n = el; n; n = n.parentElement) opacity *= Number(style(n).opacity)
+    const fgRaw = rgba(st.color)
+    const fg = over([fgRaw[0], fgRaw[1], fgRaw[2], fgRaw[3] * opacity], bg)
+    const L1 = luminance(fg), L2 = luminance(bg)
+    const ratio = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05)
+    const size = parseFloat(st.fontSize)
+    const large = size >= 24 || (size >= 18.66 && Number(st.fontWeight) >= 700)
+    const min = large ? 3 : 4.5
+    if (ratio < min) {
+      add(el, 'low-contrast', ratio < min - 1.5 ? 'high' : 'medium', {
+        ratio: Math.round(ratio * 10) / 10,
+        required: min,
+        color: `rgb(${fg.slice(0, 3).map(Math.round).join(',')})`,
+        background: `rgb(${bg.slice(0, 3).map(Math.round).join(',')})`,
+      })
+    }
+  }
+
+  // 7. Controls whose label wraps onto 3+ lines, and tiny tap targets.
   for (const el of shown.filter(isControl)) {
     if (el.matches('a') && !el.matches('nav a, [role="button"], a[class*="btn"], a[class*="button"]')) {
       // Plain inline links in prose wrap naturally; only check tap size.
@@ -711,13 +840,18 @@ function buildReport(cfg, results, curlFailures) {
       // Rows of the same list share a selector once :nth-of-type is dropped:
       // report them once, with a count, instead of one finding per row.
       const generic = i.selector.replace(/:nth-of-type\(\d+\)/g, '')
-      const key = `${r.route}|${i.type}|${generic}`
+      // A color pair is one design-token decision: report it once for the
+      // whole app, wherever it shows up.
+      const key = i.type === 'low-contrast'
+        ? `${i.type}|${r.theme}|${i.detail.color}|${i.detail.background}`
+        : `${r.route}|${i.type}|${generic}`
       const shot = r.shots.find((s) => s.issues.includes(i.n))
       const seen = { viewport: r.viewport.name, width: r.viewport.width, theme: r.theme, n: i.n, shot: shot?.file, detail: i.detail }
       if (!findings.has(key)) {
-        findings.set(key, { route: r.route, type: i.type, severity: i.severity, selector: generic, text: i.text, examples: [i.text], seen: [seen] })
+        findings.set(key, { route: r.route, routes: [r.route], type: i.type, severity: i.severity, selector: generic, text: i.text, examples: [i.text], seen: [seen] })
       } else {
         const f = findings.get(key)
+        if (!f.routes.includes(r.route)) f.routes.push(r.route)
         if (i.text && !f.examples.includes(i.text)) f.examples.push(i.text)
         if (!f.seen.some((x) => x.viewport === seen.viewport && x.theme === seen.theme)) f.seen.push(seen)
         if (SEVERITY_ORDER[i.severity] < SEVERITY_ORDER[f.severity]) f.severity = i.severity
@@ -755,6 +889,8 @@ const TYPE_LABEL = {
   'overflow-viewport': 'Element sticks out of the viewport',
   'text-clipped': 'Text is cut off (clipped without ellipsis)',
   'text-overflows-box': 'Text spills out of its container',
+  'overlap': 'Elements overlap each other',
+  'low-contrast': 'Text contrast below WCAG minimum',
   'control-wraps': 'Button/control label wraps onto 3+ lines',
   'text-truncated': 'Text truncated with ellipsis',
   'small-tap-target': 'Tap target smaller than 24×24px',
@@ -779,7 +915,7 @@ function renderMarkdown(report) {
     const where = f.seen.map((x) => `${x.width}px ${x.theme}`).join(', ')
     out.push(`### ${f.id} · ${f.severity.toUpperCase()} · ${TYPE_LABEL[f.type] || f.type}`)
     out.push('')
-    out.push(`- Screen: \`${f.route}\` — seen at ${where}`)
+    out.push(`- Screen: ${f.routes.map((x) => `\`${x}\``).join(', ')} — seen at ${where}`)
     const ex = f.examples.filter(Boolean)
     out.push(`- Element: \`${f.selector}\`${ex.length ? ` — ${ex.slice(0, 3).map((t) => `“${t}”`).join(', ')}` : ''}${ex.length > 1 ? ` (${ex.length} elements)` : ''}`)
     const d = f.seen[0].detail

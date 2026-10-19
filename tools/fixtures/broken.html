@@ -15,6 +15,10 @@
   .title { width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .icon { width: 16px; height: 16px; padding: 0; border: 0; }
   .wrap { width: 70px; }
+  .row { display: flex; gap: 4px; width: 200px; }
+  .row .badge { flex: 0 0 70px; min-width: 0; white-space: nowrap; font-weight: 700; }
+  .row .pill { flex: 0 0 60px; border: 1px solid; text-align: center; }
+  .faint { color: #b8b8b8; font-size: 14px; }
   .scroller { overflow-x: auto; white-space: nowrap; }
   .scroller span { display: inline-block; width: 200px; }
 </style>
@@ -24,6 +28,8 @@
   <h2 class="title">A very long section title that does not fit</h2>
   <div class="tag">Registrations open now</div>
   <button class="wrap">Send the invitation link now</button>
+  <p class="faint">Last updated a minute ago</p>
+  <div class="row"><span class="badge">WARMING UP</span><span class="pill">8TH</span></div>
   <div class="scroller"><span>one</span><span>two</span><span>three</span></div>
   <div class="promo">Promo banner with a fixed width</div>
 </body>

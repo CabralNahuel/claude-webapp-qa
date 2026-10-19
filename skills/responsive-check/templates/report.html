@@ -52,6 +52,8 @@ const LABEL = {
   'overflow-viewport': 'Element sticks out of the viewport',
   'text-clipped': 'Text is cut off',
   'text-overflows-box': 'Text spills out of its container',
+  'overlap': 'Elements overlap each other',
+  'low-contrast': 'Text contrast below WCAG minimum',
   'control-wraps': 'Button label wraps onto 3+ lines',
   'text-truncated': 'Text truncated with ellipsis',
   'small-tap-target': 'Tap target smaller than 24×24px',
@@ -72,7 +74,7 @@ function render(r) {
     const d = f.seen[0].detail
     out.push(`<section class="finding" style="--sev: var(--${f.severity})"><div>
       <h3><span class="pill">${f.severity.toUpperCase()}</span>${esc(f.id)} · ${esc(LABEL[f.type] || f.type)}</h3>
-      <p>Screen <code>${esc(f.route)}</code>${f.examples.filter(Boolean).length ? " — " + f.examples.filter(Boolean).slice(0, 3).map((t) => "“" + esc(t) + "”").join(", ") + (f.examples.length > 1 ? ` (${f.examples.length} elements)` : "") : ""}</p>
+      <p>Screen ${f.routes.map((x) => "<code>" + esc(x) + "</code>").join(", ")}${f.examples.filter(Boolean).length ? " — " + f.examples.filter(Boolean).slice(0, 3).map((t) => "“" + esc(t) + "”").join(", ") + (f.examples.length > 1 ? ` (${f.examples.length} elements)` : "") : ""}</p>
       <p><code>${esc(f.selector)}</code></p>
       ${d ? `<p class="meta">${Object.entries(d).map(([k, v]) => esc(k) + ': ' + esc(v)).join(' · ')}</p>` : ''}
       <div class="seen">${f.seen.map((x) => x.shot ? `<a href="${esc(x.shot)}">${x.width}px ${x.theme} #${x.n}</a>` : `<span>${x.width}px ${x.theme}</span>`).join('')}</div>

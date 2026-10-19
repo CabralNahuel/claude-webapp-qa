@@ -118,7 +118,7 @@ if (!hasPlaywright) {
 
   const small = at('/broken', 360)
   check(small?.page.horizontalScroll === true, '360px: detects horizontal scroll')
-  for (const t of ['overflow-viewport', 'text-clipped', 'text-overflows-box', 'text-truncated', 'control-wraps', 'small-tap-target']) {
+  for (const t of ['overflow-viewport', 'text-clipped', 'text-overflows-box', 'overlap', 'low-contrast', 'text-truncated', 'control-wraps', 'small-tap-target']) {
     check(types(small).has(t), `360px: detects ${t}`)
   }
   check(

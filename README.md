@@ -40,12 +40,12 @@ Ask in your own words — "check how the app looks on mobile before I ship", "so
 <table>
 <tr>
 <td><img src="docs/images/annotated-historial-360-light.png" width="240" alt="Annotated phone screenshot, light mode"></td>
-<td><img src="docs/images/annotated-home-360-dark.png" width="240" alt="Annotated phone screenshot, dark mode"></td>
+<td><img src="docs/images/annotated-ranking-360-dark.png" width="240" alt="Annotated phone screenshot, dark mode"></td>
 <td><img src="docs/images/annotated-fixture-360-light.png" width="240" alt="Annotated screenshot of a page with planted layout bugs"></td>
 </tr>
 <tr>
-<td>360px, light: small tap targets</td>
-<td>360px, dark</td>
+<td>360px, light: low contrast and small tap targets</td>
+<td>360px, dark: "▼ -27" runs into the badge</td>
 <td>Test fixture with planted bugs</td>
 </tr>
 </table>
@@ -57,8 +57,8 @@ Ask in your own words — "check how the app looks on mobile before I ship", "so
 | Severity | Finding |
 |---|---|
 | critical | The page scrolls horizontally · JavaScript error while loading |
-| high | Element sticks out of the viewport · text cut off without ellipsis · text spilling out of a button or heading |
-| medium | Text spilling out of other boxes · button label wrapping to 3+ lines · ellipsis on buttons/headings |
+| high | Element sticks out of the viewport · text cut off without ellipsis · text spilling out of a button or heading · content overlapping (a badge running into a pill) |
+| medium | Text contrast under WCAG 4.5:1 · text spilling out of other boxes · button label wrapping to 3+ lines · ellipsis on buttons/headings |
 | low | Ellipsis on body text · tap target under 24×24px (WCAG 2.5.8) |
 
 The same problem seen at several widths or on every row of a list is reported once.

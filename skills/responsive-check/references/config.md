@@ -10,7 +10,7 @@ Command-line flags override the config (run the script with `--help`).
 | `start.cwd` | string | config dir | Where to run `start.command`. |
 | `start.timeoutMs` | number | 90000 | How long to wait for the app to answer. |
 | `routes` | array | `["/"]` | Paths to visit. Each item is a string or an object (below). |
-| `viewports` | array | 360, 390, 1280 | Names (`phone-small`, `phone`, `desktop`), `"WIDTHxHEIGHT"` strings, or `{ "name", "width", "height", "mobile" }`. |
+| `viewports` | array | 360, 390, 1280 | Names (`phone-xs` 320, `phone-small`, `phone`, `desktop`), `"WIDTHxHEIGHT"` strings, or `{ "name", "width", "height", "mobile" }`. |
 | `themes` | array | `["light", "dark"]` | Color schemes to emulate (`prefers-color-scheme`). |
 | `themeStorage` | object | — | `{ "key": "app.theme", "values": { "light": "light", "dark": "dark" } }`: also writes the app's stored theme choice so it matches the emulated scheme. `values` defaults to the theme names. |
 | `locale` | string | browser default (en-US) | e.g. `es-AR`. Sets `navigator.language` and `Accept-Language`. |
@@ -61,6 +61,8 @@ Command-line flags override the config (run the script with `--help`).
 | `overflow-viewport` | An element's box extends past the left/right edge of the viewport and no ancestor clips or scrolls it. Critical when the page scrolls horizontally. |
 | `text-clipped` | A box with `overflow: hidden/clip` and no ellipsis hides part of its own text. |
 | `text-overflows-box` | Text extends past the block that contains it (`overflow: visible`). |
+| `overlap` | Two pieces of content paint over each other: text lines, or boxes with a background/border (pills, badges). Positioned layers, negative margins and transforms are skipped as intentional. |
+| `low-contrast` | Text below WCAG 1.4.3 contrast (4.5:1, or 3:1 for large text) against its solid backdrop, counting opacity. Skipped over images/gradients. One finding per color pair for the whole app. |
 | `control-wraps` | A button/tab label breaks onto 3 or more lines. |
 | `text-truncated` | Ellipsis or line-clamp is hiding text. Often intentional; worth a look on buttons and headings. |
 | `small-tap-target` | A control smaller than 24×24px (WCAG 2.5.8), except links inline in a sentence. |
