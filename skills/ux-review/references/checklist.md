@@ -94,6 +94,20 @@ one slip of the thumb should not do it.
   is every label of the app in one place, which makes inconsistencies jump
   out.
 
+## 5. Navigation and the panels behind it
+
+- **Frequent → navigation; occasional → inside a panel, but visible.** The
+  bottom/side bar is for what every role does often. Settings a single
+  role touches now and then (staff, plan, venues) belong inside its panel —
+  as cards or rows with a chevron, not as a row of plain text links at the
+  bottom that do not look tappable.
+- **A number that can be managed should be the way in**: "Staff · 1" as
+  static text next to a separate "add staff" card is two half-controls; one
+  card "Staff · 1 persona — ver y sumar" is one.
+- **Lists show what they claim to show**: a "Jugadores" list that includes
+  the owner or the staff, or that is empty without saying why, reads as a
+  bug. Empty states explain where the items come from and offer the step.
+
 ## Then: the rest
 
 Skim `guidelines.md` by category for what applies to this app (forms,

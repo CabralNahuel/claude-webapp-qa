@@ -36,6 +36,16 @@ Playwright script of your own for multi-step flows — so the inventory and
 the destructive probe run there too (probes reload the route and replay its
 `actions` before clicking).
 
+**Review once per role.** Owner, staff/admin and plain member often see
+different navigation, panels and buttons: a club owner's panel never shows
+up for a player, and "who appears in the players list" depends on who is
+looking. List the roles from the auth/role code (`isAdmin`, `isOwner`,
+`role ===`), run the inventory once per role (a config per role with the
+matching demo user or `auth.script`), and say in the report which role each
+finding belongs to. If the demo cannot switch roles (a mode only enabled by
+backend data), say so and review that part from the code and the user's
+screenshots rather than skipping it silently.
+
 Check the demo user can see every moment: if it is not a member, an admin or
 a player of the demo group, whole states (the sign-up button, admin tools)
 never appear. Seed the role in the demo data or log in as one that has it.
