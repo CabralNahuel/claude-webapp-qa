@@ -13,7 +13,7 @@ Claude Code skills to QA web apps: responsive checks across devices, UX review, 
 | [`responsive-check`](skills/responsive-check/SKILL.md) | Starts your app and walks its screens at 360px, 390px and 1280px, light and dark, with Playwright. Flags horizontal scroll, elements sticking out, cut-off or spilling text, buttons that do not fit; returns annotated screenshots and a prioritized report. | ✅ Ready |
 | [`release`](skills/release/SKILL.md) | Batches changes on an accumulation branch, opens a single PR with a summary, follows CI, fixes failures, shares the preview link and warns about cached public images that changed without a rename. | ✅ Ready |
 | `firestore-rules` | For every permission change: the rule, a test that must fail and one that must pass, run in the emulator. | 🚧 Planned |
-| `ux-review` | Checklist review: one meaning per icon (with text), one primary button per moment, protected destructive actions, clear copy. | 🚧 Planned |
+| [`ux-review`](skills/ux-review/SKILL.md) | Checklist review: one meaning per icon (with text), one primary button per moment, protected destructive actions (clicked on demo data to check), clear copy, plus 75 curated UX guidelines. | ✅ Ready |
 | `i18n-guard` | Untranslated strings and unused keys. | 🚧 Planned |
 | `pre-push` | Lint/test/build, no symlinks or local files committed, no real names in screenshots. | 🚧 Planned |
 
@@ -127,6 +127,25 @@ The check catches what CI does not:
 
 Cache rules are read from `firebase.json`, `vercel.json` or `_headers`; local or generated files in the diff (`.env`, `dist/`) are flagged too.
 
+## ux-review
+
+"Revisá la usabilidad", "¿se entiende la app?": [`scripts/ux_inventory.mjs`](skills/ux-review/scripts/ux_inventory.mjs) collects every control with its icon and label on each screen (phone + desktop) and flags the mechanical cases; Claude then walks the main task end to end and judges the rest against [`references/checklist.md`](skills/ux-review/references/checklist.md):
+
+1. **One meaning per icon, icons with text** — the same drawing used for two actions across the app, icon-only buttons, emoji as the only label.
+2. **One primary button per moment** — more than one filled/colored action competing in the same state.
+3. **Destructive actions protected** — with `--probe-destructive` (demo data only) it clicks every delete/remove/reset on a fresh load and reports whether the app asked first: browser confirm, dialog, inline "¿Seguro? Sí / No" or undo.
+4. **Clear copy** — vague labels, one object with several names, errors and empty states that leave you stuck.
+
+Plus visible keyboard focus, form labels, alt text and headings, and a second pass with 75 guidelines adapted from [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) (MIT).
+
+<table>
+<tr>
+<td><img src="docs/images/ux-sorteo-phone.png" width="240" alt="UX review: the dice icon means two things"></td>
+<td><img src="docs/images/ux-historial-phone.png" width="240" alt="UX review: icon-only edit and delete side by side"></td>
+</tr>
+<tr><td>The dice is both the "Draw" tab and the "Random" mode</td><td>Icon-only edit and delete, side by side</td></tr>
+</table>
+
 ## Repository layout
 
 ```
@@ -146,5 +165,7 @@ node tools/smoke_test.mjs            # add --browser to require Playwright
 Skills are written and measured with Anthropic's `skill-creator`: each change is run against the prompts in `evals/evals.json`, with and without the skill, and graded against the assertions.
 
 ## License
+
+The UX guidelines in `skills/ux-review/references/guidelines.md` are adapted from [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill), MIT License, Copyright (c) 2024 Next Level Builder.
 
 [MIT](LICENSE)

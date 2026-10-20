@@ -13,7 +13,7 @@ Skills de Claude Code para controlar apps web antes de publicarlas: chequeo resp
 | [`responsive-check`](skills/responsive-check/SKILL.md) | Levanta tu app y recorre sus pantallas en 360px, 390px y 1280px, modo claro y oscuro, con Playwright. Marca scroll horizontal, elementos que se salen, texto cortado o que desborda, botones que no entran; devuelve capturas marcadas y un reporte por prioridad. | ✅ Lista |
 | [`release`](skills/release/SKILL.md) | Junta los cambios en una rama de acumulación, abre un solo PR con resumen, sigue el CI, arregla lo que falla, pasa el link de preview y avisa cuando una imagen pública cambia sin cambiar de nombre (caché). | ✅ Lista |
 | `firestore-rules` | Por cada cambio de permisos: la regla, un test que tiene que fallar y otro que tiene que pasar, en el emulador. | 🚧 Planeada |
-| `ux-review` | Checklist: íconos con un solo significado y con texto, un solo botón principal según el momento, acciones destructivas protegidas, textos claros. | 🚧 Planeada |
+| [`ux-review`](skills/ux-review/SKILL.md) | Checklist: íconos con un solo significado y con texto, un solo botón principal según el momento, acciones destructivas protegidas (las toca en datos de demo para comprobarlo), textos claros, y 75 reglas de UX seleccionadas. | ✅ Lista |
 | `i18n-guard` | Textos sin traducir y claves sobrantes. | 🚧 Planeada |
 | `pre-push` | Lint/test/build, no subir links simbólicos ni archivos locales, no nombres reales en capturas. | 🚧 Planeada |
 
@@ -125,6 +125,25 @@ El chequeo encuentra lo que el CI no ve:
 
 Las reglas de caché salen de `firebase.json`, `vercel.json` o `_headers`; también avisa si en el diff hay archivos locales o generados (`.env`, `dist/`).
 
+## ux-review
+
+"Revisá la usabilidad", "¿se entiende la app?": [`scripts/ux_inventory.mjs`](skills/ux-review/scripts/ux_inventory.mjs) junta cada control con su ícono y su texto en cada pantalla (celular y compu) y marca los casos mecánicos; después Claude hace la tarea principal de punta a punta y juzga el resto con [`references/checklist.md`](skills/ux-review/references/checklist.md):
+
+1. **Un significado por ícono, íconos con texto** — el mismo dibujo para dos acciones en la app, botones de solo ícono, emojis como única etiqueta.
+2. **Un solo botón principal por momento** — más de una acción llena/de color compitiendo en el mismo estado.
+3. **Acciones destructivas protegidas** — con `--probe-destructive` (solo con datos de demo) toca cada borrar/quitar/reiniciar en una carga nueva y dice si la app preguntó antes: confirm del navegador, diálogo, "¿Seguro? Sí / No" en línea o deshacer.
+4. **Textos claros** — etiquetas vagas, una misma cosa con varios nombres, errores y pantallas vacías que no dicen qué hacer.
+
+Además: foco visible con teclado, etiquetas de campos, texto alternativo y títulos, y una segunda pasada con 75 reglas adaptadas de [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) (MIT).
+
+<table>
+<tr>
+<td><img src="docs/images/ux-sorteo-phone.png" width="240" alt="UX: el dado significa dos cosas"></td>
+<td><img src="docs/images/ux-historial-phone.png" width="240" alt="UX: editar y borrar solo con ícono, pegados"></td>
+</tr>
+<tr><td>El dado es la pestaña "Sorteo" y también el modo "Al azar"</td><td>Editar y borrar solo con ícono, uno al lado del otro</td></tr>
+</table>
+
 ## Estructura del repo
 
 ```
@@ -144,5 +163,7 @@ node tools/smoke_test.mjs            # con --browser exige Playwright
 Las skills se escriben y se miden con `skill-creator` de Anthropic: cada cambio se corre contra los prompts de `evals/evals.json`, con y sin la skill, y se califica contra las aserciones.
 
 ## Licencia
+
+Las reglas de UX de `skills/ux-review/references/guidelines.md` están adaptadas de [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill), licencia MIT, Copyright (c) 2024 Next Level Builder.
 
 [MIT](LICENSE)
