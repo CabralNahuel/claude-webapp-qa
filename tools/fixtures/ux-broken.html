@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UX broken fixture</title>
+<style>
+  body { margin: 0; font: 16px/1.4 sans-serif; padding: 16px; }
+  .primary { background: #1f7fcc; color: #fff; border: 0; border-radius: 10px; padding: 12px 18px; }
+  .icon { width: 40px; height: 40px; border: 1px solid #ccc; background: #fff; }
+  button:focus, a:focus, input:focus { outline: none; }
+  li { display: flex; gap: 8px; align-items: center; margin: 6px 0; }
+</style>
+</head>
+<body>
+  <h2>Matches</h2>
+  <div class="actions">
+    <button class="primary">Save result</button>
+    <button class="primary">Invite players</button>
+  </div>
+  <ul id="list">
+    <li>Match A <button class="icon trash-a" aria-label="Delete match" onclick="this.closest('li').remove()"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></li>
+    <li>Match B <button class="icon archive" aria-label="Archive match"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></li>
+  </ul>
+  <input placeholder="Player name">
+  <img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" width="40" height="40">
+  <button>OK</button>
+</body>
+</html>

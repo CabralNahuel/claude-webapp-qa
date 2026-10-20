@@ -182,6 +182,32 @@ if (!hasPlaywright) {
   fs.rmSync(out2, { recursive: true, force: true })
 }
 
+// ---- ux-review: inventory on the UX fixtures
+if (hasPlaywright) {
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'webapp-qa-ux-'))
+  const port = String(4900 + Math.floor(Math.random() * 90))
+  execFileSync(process.execPath, [
+    path.join(skillsDir, 'ux-review/scripts/ux_inventory.mjs'),
+    '--config', path.join(ROOT, 'tools/fixtures/qa.ux.json'),
+    '--out', out,
+  ], {
+    stdio: ['ignore', 'pipe', 'inherit'],
+    env: { ...process.env, UX_BASE_URL: `http://localhost:${port}`, UX_START: `"${process.execPath}" "${path.join(ROOT, 'tools/fixtures/serve.mjs')}" ${port}` },
+  })
+  const ux = JSON.parse(fs.readFileSync(path.join(out, 'ux-inventory.json'), 'utf8'))
+  const has = (rule, re) => ux.findings.some((f) => f.rule === rule && f.message && (!re || re.test(f.message)) && (f.screen === '/ux-broken' || !f.screen))
+  check_(has('icon-one-meaning', /Delete match.*Archive match/), 'ux: the same icon used for delete and archive is flagged')
+  check_(has('destructive-protected', /acted immediately/), 'ux: a delete that runs without asking is caught by the probe')
+  check_(has('one-primary-action'), 'ux: two primary buttons in one screen are flagged')
+  check_(has('visible-focus'), 'ux: controls with no visible keyboard focus are flagged')
+  check_(has('form-labels', /placeholder/), 'ux: placeholder-only field is flagged')
+  check_(has('clear-copy', /OK/), 'ux: vague "OK" label is flagged')
+  check_(!ux.findings.some((f) => f.screen === '/ux-ok'), `ux: /ux-ok has no findings (got ${ux.findings.filter((f) => f.screen === '/ux-ok').map((f) => f.rule).join(', ') || 'none'})`)
+  const okProbe = ux.screens.find((s) => s.route === '/ux-ok' && s.probes.length)?.probes[0]
+  check_(okProbe?.result === 'protected', 'ux: a delete behind confirm() counts as protected')
+  fs.rmSync(out, { recursive: true, force: true })
+}
+
 // ---- release: release_check on throwaway repos
 {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'webapp-qa-release-'))

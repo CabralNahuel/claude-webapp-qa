@@ -1,0 +1,6 @@
+{
+  "baseUrl": "http://localhost:4720",
+  "start": { "command": "node serve.mjs 4720" },
+  "routes": ["/ux-broken", "/ux-ok"],
+  "probeDestructive": true
+}
