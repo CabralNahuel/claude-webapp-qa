@@ -144,6 +144,47 @@
           ]
         }
       ]
+    },
+    {
+      "skill_name": "ux-review",
+      "evals": [
+        {
+          "id": 1,
+          "name": "portres-ux-review",
+          "prompt": "Hacele una revisión de UX a la app de /home/user/mafisa-padel antes de publicarla: que los íconos se entiendan, que en cada momento haya un solo botón principal, que borrar cosas esté protegido y que los textos sean claros. El dev server ya está corriendo en localhost:5173; para entrar en modo demo seteá en localStorage 'padel.demoUser' = {\"uid\":\"demo-user\",\"displayName\":\"Martín\",\"demo\":true}. Revisá Inicio, Ranking, Historial, Sorteo y Roles.",
+          "expected_output": "Covers the four rules per screen with screenshots; flags the dice icon meaning both the Sorteo tab and the 'Al azar' mode; flags icon-only Editar/Borrar side by side in Historial; verifies by clicking (demo data) that Borrar partido / Sacar del grupo ask first; looks at primary buttons per moment; concrete fixes naming components; Spanish; no code changes.",
+          "files": [],
+          "assertions": [
+            "Reviews all five screens with screenshots of them",
+            "Flags that the dice icon is used both for the Sorteo tab and for the 'Al azar' mode",
+            "Flags the icon-only Editar and Borrar buttons in Historial",
+            "Checks by actually clicking (on demo data) that deleting a match and removing a member ask for confirmation",
+            "Evaluates the number of primary buttons per screen/moment",
+            "Gives concrete fixes that name the component or file",
+            "Includes what is already done well",
+            "Does not modify the app's code",
+            "Answers in Spanish"
+          ]
+        },
+        {
+          "id": 2,
+          "name": "fixture-ux-planted",
+          "prompt": "There's a tiny page set in /home/user/claude-webapp-qa/tools/fixtures (serve it with `node serve.mjs 4795` from that folder; pages /ux-broken and /ux-ok). Do a UX review of both: icons, primary buttons, destructive actions, labels and copy, keyboard focus. Most important first, with screenshots.",
+          "expected_output": "On /ux-broken: delete runs without confirmation; same trash icon used for delete and archive; icon-only buttons; two primary buttons; no visible focus; placeholder-only input; img without alt; vague OK button; no h1. /ux-ok judged fine.",
+          "files": [],
+          "assertions": [
+            "Reports that 'Delete match' on /ux-broken removes the item with no confirmation, verified by clicking",
+            "Reports the same icon used for 'Delete match' and 'Archive match'",
+            "Reports two competing primary buttons",
+            "Reports that keyboard focus is not visible",
+            "Reports the placeholder-only 'Player name' field",
+            "Reports the vague 'OK' button",
+            "Judges /ux-ok as fine (no significant issues)",
+            "Ranks the unprotected delete among the most important findings",
+            "Saves annotated screenshots"
+          ]
+        }
+      ]
     }
   ]
 }

@@ -60,7 +60,12 @@ one slip of the thumb should not do it.
   partido del sábado 10?") for big or irreversible ones, typing the name for
   "delete group/account".
 - The confirm button repeats the verb ("Sí, borrar"), not just "OK"; the
-  safe option is the easy one (focus/default on Cancel).
+  safe option is the easy one (focus/default on Cancel). The browser's
+  `confirm()` always says "OK / Cancel" and cannot be styled: acceptable as
+  a first step, but an inline confirm or a dialog that names the action is
+  better.
+- A destructive control should look different from a neutral one (red text,
+  a danger style), not identical to "Invitar".
 - Destructive controls should not sit right next to frequent ones at
   thumb size (an "Editar" and "Borrar" 27px icons side by side is a misfire
   waiting to happen): separate them or move delete into an overflow/menu.

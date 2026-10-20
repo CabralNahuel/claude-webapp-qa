@@ -414,15 +414,20 @@ async function run() {
         const names = byIcon.get(c.icon)
         const sameKind = [...names.entries()].find(([, v]) => v.kinds.has(c.kind))
         const key = sameKind ? sameKind[0] : stem(c.name)
-        if (!names.has(key)) names.set(key, { name: c.name, where: new Set(), kinds: new Set() })
-        names.get(key).where.add(s.route)
-        names.get(key).kinds.add(c.kind)
+        if (!names.has(key)) names.set(key, { name: c.name, where: new Set(), kinds: new Set(), marks: [] })
+        const entry = names.get(key)
+        entry.where.add(s.route)
+        entry.kinds.add(c.kind)
+        if (!entry.marks.some((m) => m.screen === s.route && m.viewport === s.viewport.name)) {
+          entry.marks.push({ screen: s.route, viewport: s.viewport.name, index: c.index })
+        }
       }
     }
     for (const [icon, names] of byIcon) {
       if (names.size < 2) continue
       const list = [...names.values()].map((x) => `“${x.name}” (${[...x.where].join(', ')})`)
-      push({ rule: 'icon-one-meaning', severity: 'high', icon, message: `The same icon means ${names.size} different things: ${list.join(' · ')}.` })
+      push({ rule: 'icon-one-meaning', severity: 'high', icon, marks: [...names.values()].flatMap((x) => x.marks),
+        message: `The same icon means ${names.size} different things: ${list.join(' · ')}.` })
     }
     // The same meaning drawn with different icons.
     const byName = new Map()
@@ -487,8 +492,12 @@ async function run() {
 
     // ---- screenshots: one per screen, numbered with that screen's findings
     for (const s of screens) {
-      const mine = findings.filter((f) => f.screen === s.route && f.viewport === s.viewport.name)
-      const items = mine.flatMap((f) => (f.indexes || (f.index != null ? [f.index] : [])).map((index) => ({ index, n: f.id.slice(1), severity: f.severity })))
+      const here = (m) => m.screen === s.route && m.viewport === s.viewport.name
+      const mine = findings.filter((f) => here(f) || f.marks?.some(here))
+      const items = mine.flatMap((f) => [
+        ...(here(f) ? f.indexes || (f.index != null ? [f.index] : []) : []),
+        ...(f.marks || []).filter(here).map((m) => m.index),
+      ].map((index) => ({ index, n: f.id.slice(1), severity: f.severity })))
       await s.page.goto(cfg.baseUrl + s.route, { waitUntil: 'domcontentloaded' }).catch(() => {})
       await open(s.page, cfg, cfg.routes.find((r) => r.path === s.route))
       await inventory(s.page, cfg) // rebuild element indexes on this load
@@ -496,14 +505,15 @@ async function run() {
       const file = `${slug(s.route)}--${s.viewport.name}.png`
       await s.page.screenshot({ path: path.join(shots, file), mask: cfg.mask.map((m) => s.page.locator(m)), maskColor: '#222' })
       s.shot = `screenshots/${file}`
-      for (const f of mine) f.shot = s.shot
+      for (const f of mine) f.shot = f.shot || s.shot
+      for (const f of mine) if (f.marks) (f.shots ||= []).push(s.shot)
     }
 
     const out = {
       generatedAt: new Date().toISOString(),
       baseUrl: cfg.baseUrl,
       probedDestructive: cfg.probeDestructive,
-      findings,
+      findings: findings.map(({ marks, ...f }) => f),
       screens: screens.map(({ page, context, ...s }) => ({
         ...s,
         redirected: s.finalPath !== s.route.split('?')[0] ? s.finalPath : null,
