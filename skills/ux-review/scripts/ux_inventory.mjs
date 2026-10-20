@@ -24,7 +24,7 @@ const VIEWPORTS = {
   desktop: { name: 'desktop', width: 1280, height: 800, mobile: false },
 }
 const DESTRUCTIVE =
-  '\\b(borrar|eliminar|quitar|sacar|expulsar|salir del grupo|abandonar|cancelar (el |la )?(partido|torneo|fecha|suscripci[oó]n|inscripci[oó]n)|dar de baja|delete|remove|discard|leave group|kick|unsubscribe|reset|reiniciar)\\b|🗑'
+  '\\b(borrar|eliminar|quitar|sacar|expulsar|salir del grupo|abandonar|cancelar (el |la )?(partido|torneo|fecha|suscripci[oó]n|inscripci[oó]n)|dar de baja|descartar|empezar de nuevo|volver a sortear|sortear de nuevo|delete|remove|discard|start over|leave group|kick|unsubscribe|reset|reiniciar)\\b|🗑'
 // \b is ASCII-only in JS ("Sí" would not match), so use Unicode letter edges.
 const CONFIRM_WORDS =
   /(^|[^\p{L}])(s[ií]|no|confirmar|confirmo|seguro|borrar|eliminar|cancelar|deshacer|yes|confirm|sure|delete|cancel|undo|keep|mantener|volver)(?=$|[^\p{L}])/iu

@@ -27,6 +27,19 @@ different primary buttons. Capture extra states with route `actions`:
 { "path": "/", "name": "home-signed-up", "actions": [{ "click": "text=Anotarme" }, { "wait": 400 }] }
 ```
 
+**Walk the core task end to end.** The worst UX bugs live in the middle of
+a flow, not on a fresh screen: a result already entered that one tap on ×
+deletes, a "draw again" that silently throws away the scores being typed.
+Do the main job of the app once (create the thing, fill it, save it), and
+capture the screens in those states — with route `actions`, or a short
+Playwright script of your own for multi-step flows — so the inventory and
+the destructive probe run there too (probes reload the route and replay its
+`actions` before clicking).
+
+Check the demo user can see every moment: if it is not a member, an admin or
+a player of the demo group, whole states (the sign-up button, admin tools)
+never appear. Seed the role in the demo data or log in as one that has it.
+
 ## 2. Run the inventory
 
 ```bash
@@ -60,6 +73,11 @@ not verdicts:
   with the card's own button.
 - **Read the source when it helps the fix**: find the component (grep the
   label) so the recommendation names the file and the change.
+- **Grep for actions that destroy without asking**: handlers that call
+  delete/remove/reset/clear (`onClick={() => remove…(`, `deleteX(`,
+  `setRounds([])`, `localStorage.removeItem`) directly from a button, with
+  no confirm state or undo in between. Re-draws, "start over" and "edit
+  attendees" count when they discard what the user already typed.
 - Then skim `references/guidelines.md` (75 rules adapted from
   ui-ux-pro-max, MIT) for forms, feedback, navigation and accessibility
   issues relevant to this app. Cite the rule name.

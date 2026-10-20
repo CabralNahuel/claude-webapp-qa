@@ -70,6 +70,13 @@ one slip of the thumb should not do it.
   thumb size (an "Editar" and "Borrar" 27px icons side by side is a misfire
   waiting to happen): separate them or move delete into an overflow/menu.
 
+- **Discarding work is destructive too**: "volver a sortear", "empezar de
+  nuevo", changing the attendee list while scores are half typed. If there
+  is unsaved input, ask or keep it.
+- **× is for close/cancel.** When × also deletes (a result, a player, a
+  video), the same mark means "dismiss" in one place and "destroy" in
+  another: use a trash icon (with text) for delete.
+
 ## 4. Clear copy
 
 - **Buttons say what happens**: "Guardar resultado", "Invitar al grupo",
