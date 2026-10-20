@@ -183,6 +183,16 @@ async function launchChromium(chromium) {
 // ---------------------------------------------------------------- app server
 
 async function isUp(url) {
+  // Node's fetch ignores HTTPS_PROXY; in sandboxes only curl reaches the
+  // internet, so remote URLs (a PR preview, staging) are checked with it.
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/.test(url)) {
+    try {
+      const code = execFileSync('curl', ['-sS', '-o', '/dev/null', '-w', '%{http_code}', '--max-time', '15', url], { encoding: 'utf8' })
+      return Number(code) > 0 && Number(code) < 500
+    } catch {
+      return false
+    }
+  }
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(2000) })
     return res.status < 500

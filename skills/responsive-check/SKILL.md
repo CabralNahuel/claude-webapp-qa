@@ -135,6 +135,15 @@ Environment notes that save time:
   viewport shot instead. If you need a closer look at one component, take an
   element screenshot (`locator.screenshot()`) yourself.
 
+### Checking a deployed URL (PR preview, staging)
+
+`baseUrl` can be a remote URL; nothing is started. Use the app's own
+"try it" mode if it has one (in production builds a local demo flag is often
+disabled). In sandboxes the host must be allowed by the network policy
+(e.g. `*.web.app` for Firebase previews); if the check says it is not
+responding and `curl` gets a 403 from the proxy, tell the user which host to
+allow instead of reporting on a local build as if it were the preview.
+
 ## 4. Review before reporting
 
 Open the screenshots for every critical/high finding and a sample of the
